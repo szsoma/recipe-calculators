@@ -209,6 +209,7 @@ export default function Pizza() {
           </h2>
           <div className="space-y-4">
             <NumberInput label="Share of total flour" value={bigaPct} onChange={setBigaPct} min={10} max={100} step={5} unit="%" />
+            <NumberInput label="Biga hydration" value={bigaHyd} onChange={(v) => setBigaHydFine(String(v))} min={30} max={80} step={1} unit="%" />
             <NumberInput label="Temperature" value={bigaTemp} onChange={setBigaTemp} min={4} max={30} step={1} unit="°C" />
             <NumberInput label="Time" value={bigaTime} onChange={setBigaTime} min={4} max={48} step={1} unit="h" />
             <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
@@ -353,7 +354,6 @@ export default function Pizza() {
             <span className="text-lg">⚙️</span> Variables
           </h2>
           <div className="space-y-4">
-            <NumberInput label="Biga hydration" value={bigaHyd} onChange={(v) => setBigaHydFine(String(v))} min={30} max={80} step={1} unit="%" />
             <NumberInput label="Biga yeast" value={bigaYeast} onChange={(v) => setBigaYeastFine(String(v))} min={0.1} max={5} step={0.05} unit="%" />
             <NumberInput label="Salt" value={salt} onChange={(v) => setSaltFine(String(v))} min={0.5} max={5} step={0.1} unit="%" />
           </div>
