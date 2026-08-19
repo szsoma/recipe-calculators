@@ -81,7 +81,7 @@ export default function Slambuc() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setPeople((p) => Math.max(1, p - 1))}
-                  className="w-10 h-10 rounded-lg border-2 border-gray-200 bg-gray-50 text-xl font-bold text-gray-700 flex items-center justify-center hover:bg-gray-100"
+                  className="w-11 h-11 rounded-lg border-2 border-gray-200 bg-gray-50 text-xl font-bold text-gray-700 flex items-center justify-center hover:bg-gray-100"
                 >
                   −
                 </button>
@@ -97,7 +97,7 @@ export default function Slambuc() {
                 />
                 <button
                   onClick={() => setPeople((p) => p + 1)}
-                  className="w-10 h-10 rounded-lg border-2 border-gray-200 bg-gray-50 text-xl font-bold text-gray-700 flex items-center justify-center hover:bg-gray-100"
+                  className="w-11 h-11 rounded-lg border-2 border-gray-200 bg-gray-50 text-xl font-bold text-gray-700 flex items-center justify-center hover:bg-gray-100"
                 >
                   +
                 </button>
@@ -107,7 +107,7 @@ export default function Slambuc() {
                 min="1"
                 max="50"
                 value={Math.min(people, 50)}
-                onChange={(e) => setPeople(parseInt(e.target.value))}
+                onChange={(e) => setPeople(parseInt(e.target.value, 10))}
                 className="w-full mt-4 accent-orange-700"
               />
               <div className="flex justify-between text-xs text-gray-400 mt-1">
