@@ -11,19 +11,9 @@ const BIGA_YEAST_DEFAULT_INSTANT = 0.3
 const FINAL_HYD_DEFAULT = 65
 const BIGA_PCT_DEFAULT = 30
 
-const BALL_OPTIONS = Array.from({ length: 40 }, (_, i) => i + 1)
-const BALL_W_OPTIONS = []
-for (let w = 150; w <= 400; w += 10) BALL_W_OPTIONS.push(w)
-const BIGA_PCT_OPTIONS = []
-for (let p = 10; p <= 100; p += 5) BIGA_PCT_OPTIONS.push(p)
-const TEMP_OPTIONS = []
-for (let t = 4; t <= 30; t += 1) TEMP_OPTIONS.push(t)
-const BIGA_TIME_OPTIONS = []
-for (let h = 4; h <= 48; h += 1) BIGA_TIME_OPTIONS.push(h)
-const FINAL_HYD_OPTIONS = []
-for (let h = 55; h <= 85; h += 1) FINAL_HYD_OPTIONS.push(h)
-const FINAL_TIME_OPTIONS = []
-for (let h = 1; h <= 72; h += 1) FINAL_TIME_OPTIONS.push(h)
+function clamp(v, min, max) {
+  return Math.min(max, Math.max(min, v))
+}
 
 function round(v) {
   return Math.round(v * 10) / 10
@@ -52,20 +42,23 @@ function addHours(date, hours) {
   return new Date(date.getTime() + hours * 3600000)
 }
 
-function SelectInput({ label, value, onChange, options, unit }) {
+function NumberInput({ label, value, onChange, min, max, step, unit }) {
   return (
     <div>
       <label className="block text-sm text-gray-400 mb-1">{label}</label>
       <div className="flex items-center gap-2">
-        <select
+        <input
+          type="number"
+          min={min}
+          max={max}
+          step={step}
           value={value}
-          onChange={(e) => onChange(parseInt(e.target.value, 10))}
-          className="flex-1 px-3 py-2.5 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-sm appearance-none cursor-pointer focus:outline-none focus:border-[#FF6A2C]"
-        >
-          {options.map((opt) => (
-            <option key={opt} value={opt}>{opt}</option>
-          ))}
-        </select>
+          onChange={(e) => {
+            const n = parseFloat(e.target.value)
+            if (!isNaN(n)) onChange(clamp(n, min, max))
+          }}
+          className="flex-1 px-3 py-2.5 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-sm font-mono text-center focus:outline-none focus:border-[#FF6A2C]"
+        />
         {unit && <span className="text-gray-400 text-sm w-8">{unit}</span>}
       </div>
     </div>
@@ -180,8 +173,8 @@ export default function Pizza() {
             <span className="text-lg">📦</span> Batch
           </h2>
           <div className="space-y-4">
-            <SelectInput label="Pizza balls" value={balls} onChange={setBalls} options={BALL_OPTIONS} unit="pcs" />
-            <SelectInput label="Ball weight" value={ballW} onChange={setBallW} options={BALL_W_OPTIONS} unit="g" />
+            <NumberInput label="Pizza balls" value={balls} onChange={setBalls} min={1} max={40} step={1} unit="pcs" />
+            <NumberInput label="Ball weight" value={ballW} onChange={setBallW} min={150} max={400} step={10} unit="g" />
             <div className="bg-[#0D1014] rounded-xl p-3 flex justify-between items-center">
               <span className="text-sm text-gray-400">Target dough weight</span>
               <span className="text-white font-bold">{round(target)}g</span>
@@ -195,9 +188,9 @@ export default function Pizza() {
             <span className="text-lg">🫗</span> Biga <span className="text-xs text-gray-500 font-normal">day 1 · no salt</span>
           </h2>
           <div className="space-y-4">
-            <SelectInput label="Share of total flour" value={bigaPct} onChange={setBigaPct} options={BIGA_PCT_OPTIONS} unit="%" />
-            <SelectInput label="Temperature" value={bigaTemp} onChange={setBigaTemp} options={TEMP_OPTIONS} unit="°C" />
-            <SelectInput label="Time" value={bigaTime} onChange={setBigaTime} options={BIGA_TIME_OPTIONS} unit="h" />
+            <NumberInput label="Share of total flour" value={bigaPct} onChange={setBigaPct} min={10} max={100} step={5} unit="%" />
+            <NumberInput label="Temperature" value={bigaTemp} onChange={setBigaTemp} min={4} max={30} step={1} unit="°C" />
+            <NumberInput label="Time" value={bigaTime} onChange={setBigaTime} min={4} max={48} step={1} unit="h" />
             <div className="bg-[#0D1014] rounded-xl p-3">
               <div className="flex justify-between items-center mb-1">
                 <span className="text-sm text-gray-400">Fermentation equivalent</span>
@@ -214,9 +207,9 @@ export default function Pizza() {
             <span className="text-lg">🫓</span> Final Dough <span className="text-xs text-gray-500 font-normal">day 2</span>
           </h2>
           <div className="space-y-4">
-            <SelectInput label="Hydration" value={finalHyd} onChange={setFinalHyd} options={FINAL_HYD_OPTIONS} unit="%" />
-            <SelectInput label="Temperature" value={finalTemp} onChange={setFinalTemp} options={TEMP_OPTIONS} unit="°C" />
-            <SelectInput label="Time" value={finalTime} onChange={setFinalTime} options={FINAL_TIME_OPTIONS} unit="h" />
+            <NumberInput label="Hydration" value={finalHyd} onChange={setFinalHyd} min={55} max={85} step={1} unit="%" />
+            <NumberInput label="Temperature" value={finalTemp} onChange={setFinalTemp} min={4} max={30} step={1} unit="°C" />
+            <NumberInput label="Time" value={finalTime} onChange={setFinalTime} min={1} max={72} step={1} unit="h" />
             <div className="bg-[#0D1014] rounded-xl p-3">
               <div className="flex justify-between items-center mb-1">
                 <span className="text-sm text-gray-400">Fermentation equivalent</span>
