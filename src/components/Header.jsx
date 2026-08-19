@@ -15,7 +15,7 @@ export default function Header({ icon, title, accent = 'amber' }) {
       <div className="flex items-center h-14 px-4 max-w-lg mx-auto">
         <button
           onClick={() => navigate('/')}
-          className="p-2 -ml-2 hover:bg-white/10 rounded-lg transition-colors"
+          className="p-3 -ml-2 hover:bg-white/10 rounded-lg transition-colors"
           aria-label="Back to hub"
         >
           <ArrowLeft className="w-5 h-5" />
