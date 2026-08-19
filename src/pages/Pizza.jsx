@@ -64,6 +64,10 @@ function NumberInput({ label, value, onChange, min, max, step, unit }) {
           value={value}
           onChange={(e) => {
             const n = parseFloat(e.target.value)
+            if (!isNaN(n)) onChange(n)
+          }}
+          onBlur={(e) => {
+            const n = parseFloat(e.target.value)
             if (!isNaN(n)) onChange(clamp(n, min, max))
           }}
           className="flex-1 px-2 py-2.5 border-2 border-gray-200 bg-gray-50 rounded-lg text-gray-900 text-sm font-mono text-center focus:outline-none focus:border-red-500"
