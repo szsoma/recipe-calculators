@@ -7,7 +7,7 @@ import { Copy, Clock, Check } from 'lucide-react'
 const accent = 'red'
 
 const SALT_DEFAULT = 3
-const BIGA_HYD_DEFAULT = 55
+const BIGA_HYD_DEFAULT = 42
 const BIGA_YEAST_DEFAULT_FRESH = 0.8
 const BIGA_YEAST_DEFAULT_INSTANT = 0.3
 const FINAL_HYD_DEFAULT = 65
