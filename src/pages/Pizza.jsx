@@ -333,37 +333,6 @@ export default function Pizza() {
             </table>
           </div>
 
-          {/* Fine-tuning */}
-          <details className="mb-4">
-            <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-600 transition-colors">
-              Fine-tune baker's percentages...
-            </summary>
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              <div>
-                <label className="block text-xs text-gray-400 uppercase tracking-wider mb-1">Biga hydr.</label>
-                <input type="number" min="0" max="100" step="1" placeholder={BIGA_HYD_DEFAULT}
-                  value={bigaHydFine}
-                  onChange={(e) => setBigaHydFine(e.target.value)}
-                  className="w-full px-2 py-1.5 border border-gray-200 bg-gray-50 rounded-lg text-gray-900 text-sm text-center font-mono focus:outline-none focus:border-red-500" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 uppercase tracking-wider mb-1">Biga yeast</label>
-                <input type="number" min="0" max="5" step="0.05"
-                  placeholder={useFreshYeast ? BIGA_YEAST_DEFAULT_FRESH : BIGA_YEAST_DEFAULT_INSTANT}
-                  value={bigaYeastFine}
-                  onChange={(e) => setBigaYeastFine(e.target.value)}
-                  className="w-full px-2 py-1.5 border border-gray-200 bg-gray-50 rounded-lg text-gray-900 text-sm text-center font-mono focus:outline-none focus:border-red-500" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 uppercase tracking-wider mb-1">Salt</label>
-                <input type="number" min="0" max="10" step="0.1" placeholder={SALT_DEFAULT}
-                  value={saltFine}
-                  onChange={(e) => setSaltFine(e.target.value)}
-                  className="w-full px-2 py-1.5 border border-gray-200 bg-gray-50 rounded-lg text-gray-900 text-sm text-center font-mono focus:outline-none focus:border-red-500" />
-              </div>
-            </div>
-          </details>
-
           {/* Copy button */}
           <button
             onClick={handleCopy}
@@ -372,6 +341,18 @@ export default function Pizza() {
             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
             {copied ? 'Copied!' : 'Copy recipe'}
           </button>
+        </Card>
+
+        {/* Variables */}
+        <Card>
+          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="text-lg">⚙️</span> Variables
+          </h2>
+          <div className="space-y-4">
+            <NumberInput label="Biga hydration" value={bigaHyd} onChange={(v) => setBigaHydFine(String(v))} min={30} max={80} step={1} unit="%" />
+            <NumberInput label="Biga yeast" value={bigaYeast} onChange={(v) => setBigaYeastFine(String(v))} min={0.1} max={5} step={0.05} unit="%" />
+            <NumberInput label="Salt" value={salt} onChange={(v) => setSaltFine(String(v))} min={0.5} max={5} step={0.1} unit="%" />
+          </div>
         </Card>
 
         {/* Schedule */}
