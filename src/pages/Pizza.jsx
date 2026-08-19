@@ -11,6 +11,20 @@ const BIGA_YEAST_DEFAULT_INSTANT = 0.3
 const FINAL_HYD_DEFAULT = 65
 const BIGA_PCT_DEFAULT = 30
 
+const BALL_OPTIONS = Array.from({ length: 40 }, (_, i) => i + 1)
+const BALL_W_OPTIONS = []
+for (let w = 150; w <= 400; w += 10) BALL_W_OPTIONS.push(w)
+const BIGA_PCT_OPTIONS = []
+for (let p = 10; p <= 100; p += 5) BIGA_PCT_OPTIONS.push(p)
+const TEMP_OPTIONS = []
+for (let t = 4; t <= 30; t += 1) TEMP_OPTIONS.push(t)
+const BIGA_TIME_OPTIONS = []
+for (let h = 4; h <= 48; h += 1) BIGA_TIME_OPTIONS.push(h)
+const FINAL_HYD_OPTIONS = []
+for (let h = 55; h <= 85; h += 1) FINAL_HYD_OPTIONS.push(h)
+const FINAL_TIME_OPTIONS = []
+for (let h = 1; h <= 72; h += 1) FINAL_TIME_OPTIONS.push(h)
+
 function round(v) {
   return Math.round(v * 10) / 10
 }
@@ -28,25 +42,47 @@ function getFermentationLabel(eqHours) {
   return { text: 'Extended — very deep, sour notes possible', color: 'text-purple-400' }
 }
 
-function formatScheduleTime(date) {
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+function formatDateTime(date) {
+  const day = date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+  const time = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  return `${time} ${day}`
 }
 
 function addHours(date, hours) {
   return new Date(date.getTime() + hours * 3600000)
 }
 
+function SelectInput({ label, value, onChange, options, unit }) {
+  return (
+    <div>
+      <label className="block text-sm text-gray-400 mb-1">{label}</label>
+      <div className="flex items-center gap-2">
+        <select
+          value={value}
+          onChange={(e) => onChange(parseInt(e.target.value, 10))}
+          className="flex-1 px-3 py-2.5 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-sm appearance-none cursor-pointer focus:outline-none focus:border-[#FF6A2C]"
+        >
+          {options.map((opt) => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+        {unit && <span className="text-gray-400 text-sm w-8">{unit}</span>}
+      </div>
+    </div>
+  )
+}
+
 export default function Pizza() {
   const [balls, setBalls] = useState(4)
-  const [ballW, setBallW] = useState(250)
+  const [ballW, setBallW] = useState(260)
 
   const [bigaPct, setBigaPct] = useState(BIGA_PCT_DEFAULT)
   const [bigaTemp, setBigaTemp] = useState(18)
   const [bigaTime, setBigaTime] = useState(12)
 
   const [finalHyd, setFinalHyd] = useState(FINAL_HYD_DEFAULT)
-  const [finalTemp, setFinalTemp] = useState(18)
-  const [finalTime, setFinalTime] = useState(8)
+  const [finalTemp, setFinalTemp] = useState(20)
+  const [finalTime, setFinalTime] = useState(10)
 
   const [useFreshYeast, setUseFreshYeast] = useState(true)
 
@@ -54,7 +90,7 @@ export default function Pizza() {
   const [bigaYeastFine, setBigaYeastFine] = useState('')
   const [saltFine, setSaltFine] = useState('')
 
-  const [bakeTimeStr, setBakeTimeStr] = useState('')
+  const [bakeDateTimeStr, setBakeDateTimeStr] = useState('')
   const [copied, setCopied] = useState(false)
 
   const salt = saltFine !== '' ? parseFloat(saltFine) : SALT_DEFAULT
@@ -85,15 +121,13 @@ export default function Pizza() {
   const yeastTypeLabel = useFreshYeast ? 'Fresh' : 'Instant'
 
   let schedule = null
-  if (bakeTimeStr) {
-    const [h, m] = bakeTimeStr.split(':').map(Number)
-    const bakeTime = new Date()
-    bakeTime.setHours(h || 0, m || 0, 0, 0)
-
-    const finalMixTime = addHours(bakeTime, -(finalTime))
-    const bigaMixTime = addHours(finalMixTime, -(bigaTime))
-
-    schedule = { bakeTime, finalMixTime, bigaMixTime }
+  if (bakeDateTimeStr) {
+    const bakeTime = new Date(bakeDateTimeStr)
+    if (!isNaN(bakeTime)) {
+      const finalMixTime = addHours(bakeTime, -(finalTime))
+      const bigaMixTime = addHours(finalMixTime, -(bigaTime))
+      schedule = { bakeTime, finalMixTime, bigaMixTime }
+    }
   }
 
   function buildRecipeText() {
@@ -118,9 +152,9 @@ export default function Pizza() {
     if (schedule) {
       lines.push(``)
       lines.push(`── Schedule ──`)
-      lines.push(`Mix biga: ${formatScheduleTime(schedule.bigaMixTime)}`)
-      lines.push(`Final mix: ${formatScheduleTime(schedule.finalMixTime)}`)
-      lines.push(`Bake: ${formatScheduleTime(schedule.bakeTime)}`)
+      lines.push(`Mix biga: ${formatDateTime(schedule.bigaMixTime)}`)
+      lines.push(`Final mix: ${formatDateTime(schedule.finalMixTime)}`)
+      lines.push(`Bake: ${formatDateTime(schedule.bakeTime)}`)
     }
 
     return lines.join('\n')
@@ -146,29 +180,8 @@ export default function Pizza() {
             <span className="text-lg">📦</span> Batch
           </h2>
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Pizza balls</label>
-              <div className="flex items-center gap-3">
-                <input type="range" min="1" max="40" value={balls}
-                  onChange={(e) => setBalls(parseInt(e.target.value, 10))}
-                  className="flex-1 accent-[#FF6A2C]" />
-                <input type="number" min="1" max="40" value={balls}
-                  onChange={(e) => { const n = parseInt(e.target.value, 10); setBalls(isNaN(n) || n < 1 ? 1 : Math.min(n, 40)) }}
-                  className="w-16 px-2 py-1.5 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-center text-sm focus:outline-none focus:border-[#FF6A2C]" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Ball weight (g)</label>
-              <div className="flex items-center gap-3">
-                <input type="range" min="150" max="400" step="5" value={ballW}
-                  onChange={(e) => setBallW(parseInt(e.target.value, 10))}
-                  className="flex-1 accent-[#FF6A2C]" />
-                <input type="number" min="150" max="400" value={ballW}
-                  onChange={(e) => { const n = parseInt(e.target.value, 10); setBallW(isNaN(n) || n < 150 ? 150 : Math.min(n, 400)) }}
-                  className="w-16 px-2 py-1.5 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-center text-sm focus:outline-none focus:border-[#FF6A2C]" />
-                <span className="text-gray-400 text-sm">g</span>
-              </div>
-            </div>
+            <SelectInput label="Pizza balls" value={balls} onChange={setBalls} options={BALL_OPTIONS} unit="pcs" />
+            <SelectInput label="Ball weight" value={ballW} onChange={setBallW} options={BALL_W_OPTIONS} unit="g" />
             <div className="bg-[#0D1014] rounded-xl p-3 flex justify-between items-center">
               <span className="text-sm text-gray-400">Target dough weight</span>
               <span className="text-white font-bold">{round(target)}g</span>
@@ -179,45 +192,12 @@ export default function Pizza() {
         {/* Biga */}
         <section className="bg-[#141a22] rounded-2xl p-4 sm:p-6 border border-[#1e2a36]">
           <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
-            <span className="text-lg">🫗</span> Biga
+            <span className="text-lg">🫗</span> Biga <span className="text-xs text-gray-500 font-normal">day 1 · no salt</span>
           </h2>
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Share of total flour (%)</label>
-              <div className="flex items-center gap-3">
-                <input type="range" min="10" max="100" value={bigaPct}
-                  onChange={(e) => setBigaPct(parseInt(e.target.value, 10))}
-                  className="flex-1 accent-[#FF6A2C]" />
-                <input type="number" min="10" max="100" value={bigaPct}
-                  onChange={(e) => { const n = parseInt(e.target.value, 10); setBigaPct(isNaN(n) || n < 10 ? 10 : Math.min(n, 100)) }}
-                  className="w-16 px-2 py-1.5 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-center text-sm focus:outline-none focus:border-[#FF6A2C]" />
-                <span className="text-gray-400 text-sm">%</span>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Temperature (°C)</label>
-              <div className="flex items-center gap-3">
-                <input type="range" min="4" max="30" value={bigaTemp}
-                  onChange={(e) => setBigaTemp(parseInt(e.target.value, 10))}
-                  className="flex-1 accent-[#FF6A2C]" />
-                <input type="number" min="4" max="30" value={bigaTemp}
-                  onChange={(e) => { const n = parseInt(e.target.value, 10); setBigaTemp(isNaN(n) || n < 4 ? 4 : Math.min(n, 30)) }}
-                  className="w-16 px-2 py-1.5 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-center text-sm focus:outline-none focus:border-[#FF6A2C]" />
-                <span className="text-gray-400 text-sm">°C</span>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Time (hours)</label>
-              <div className="flex items-center gap-3">
-                <input type="range" min="4" max="48" value={bigaTime}
-                  onChange={(e) => setBigaTime(parseInt(e.target.value, 10))}
-                  className="flex-1 accent-[#FF6A2C]" />
-                <input type="number" min="4" max="48" value={bigaTime}
-                  onChange={(e) => { const n = parseInt(e.target.value, 10); setBigaTime(isNaN(n) || n < 4 ? 4 : Math.min(n, 48)) }}
-                  className="w-16 px-2 py-1.5 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-center text-sm focus:outline-none focus:border-[#FF6A2C]" />
-                <span className="text-gray-400 text-sm">h</span>
-              </div>
-            </div>
+            <SelectInput label="Share of total flour" value={bigaPct} onChange={setBigaPct} options={BIGA_PCT_OPTIONS} unit="%" />
+            <SelectInput label="Temperature" value={bigaTemp} onChange={setBigaTemp} options={TEMP_OPTIONS} unit="°C" />
+            <SelectInput label="Time" value={bigaTime} onChange={setBigaTime} options={BIGA_TIME_OPTIONS} unit="h" />
             <div className="bg-[#0D1014] rounded-xl p-3">
               <div className="flex justify-between items-center mb-1">
                 <span className="text-sm text-gray-400">Fermentation equivalent</span>
@@ -231,45 +211,12 @@ export default function Pizza() {
         {/* Final Dough */}
         <section className="bg-[#141a22] rounded-2xl p-4 sm:p-6 border border-[#1e2a36]">
           <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
-            <span className="text-lg">🫓</span> Final Dough
+            <span className="text-lg">🫓</span> Final Dough <span className="text-xs text-gray-500 font-normal">day 2</span>
           </h2>
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Hydration (%)</label>
-              <div className="flex items-center gap-3">
-                <input type="range" min="55" max="85" value={finalHyd}
-                  onChange={(e) => setFinalHyd(parseInt(e.target.value, 10))}
-                  className="flex-1 accent-[#FF6A2C]" />
-                <input type="number" min="55" max="85" value={finalHyd}
-                  onChange={(e) => { const n = parseInt(e.target.value, 10); setFinalHyd(isNaN(n) || n < 55 ? 55 : Math.min(n, 85)) }}
-                  className="w-16 px-2 py-1.5 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-center text-sm focus:outline-none focus:border-[#FF6A2C]" />
-                <span className="text-gray-400 text-sm">%</span>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Temperature (°C)</label>
-              <div className="flex items-center gap-3">
-                <input type="range" min="4" max="30" value={finalTemp}
-                  onChange={(e) => setFinalTemp(parseInt(e.target.value, 10))}
-                  className="flex-1 accent-[#FF6A2C]" />
-                <input type="number" min="4" max="30" value={finalTemp}
-                  onChange={(e) => { const n = parseInt(e.target.value, 10); setFinalTemp(isNaN(n) || n < 4 ? 4 : Math.min(n, 30)) }}
-                  className="w-16 px-2 py-1.5 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-center text-sm focus:outline-none focus:border-[#FF6A2C]" />
-                <span className="text-gray-400 text-sm">°C</span>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Time (hours)</label>
-              <div className="flex items-center gap-3">
-                <input type="range" min="1" max="72" value={finalTime}
-                  onChange={(e) => setFinalTime(parseInt(e.target.value, 10))}
-                  className="flex-1 accent-[#FF6A2C]" />
-                <input type="number" min="1" max="72" value={finalTime}
-                  onChange={(e) => { const n = parseInt(e.target.value, 10); setFinalTime(isNaN(n) || n < 1 ? 1 : Math.min(n, 72)) }}
-                  className="w-16 px-2 py-1.5 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-center text-sm focus:outline-none focus:border-[#FF6A2C]" />
-                <span className="text-gray-400 text-sm">h</span>
-              </div>
-            </div>
+            <SelectInput label="Hydration" value={finalHyd} onChange={setFinalHyd} options={FINAL_HYD_OPTIONS} unit="%" />
+            <SelectInput label="Temperature" value={finalTemp} onChange={setFinalTemp} options={TEMP_OPTIONS} unit="°C" />
+            <SelectInput label="Time" value={finalTime} onChange={setFinalTime} options={FINAL_TIME_OPTIONS} unit="h" />
             <div className="bg-[#0D1014] rounded-xl p-3">
               <div className="flex justify-between items-center mb-1">
                 <span className="text-sm text-gray-400">Fermentation equivalent</span>
@@ -283,89 +230,98 @@ export default function Pizza() {
         {/* Recipe */}
         <section className="bg-[#141a22] rounded-2xl p-4 sm:p-6 border border-[#1e2a36]">
           <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
-            <span className="text-lg">📋</span> Recipe
+            <span className="text-lg">📋</span> Recipe <span className="text-xs text-gray-500 font-normal">{round(F)}g flour</span>
           </h2>
 
           {/* Yeast toggle */}
-          <div className="flex items-center justify-between p-3 bg-[#0D1014] rounded-lg mb-4">
-            <span className="text-sm text-gray-400">Yeast type</span>
+          <div className="seg flex gap-1 bg-[#0D1014] p-1 rounded-lg border border-[#1e2a36] mb-4">
             <button
-              onClick={() => setUseFreshYeast(!useFreshYeast)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0D1014] ${
-                useFreshYeast ? 'bg-[#FF6A2C]' : 'bg-gray-600'
+              onClick={() => setUseFreshYeast(true)}
+              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                useFreshYeast ? 'bg-[#1e2a36] text-white' : 'text-gray-500'
               }`}
-              role="switch"
-              aria-checked={useFreshYeast}
             >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  useFreshYeast ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
+              Fresh yeast
             </button>
-            <span className="text-sm text-white w-14 text-right">{useFreshYeast ? 'Fresh' : 'Instant'}</span>
+            <button
+              onClick={() => setUseFreshYeast(false)}
+              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                !useFreshYeast ? 'bg-[#1e2a36] text-white' : 'text-gray-500'
+              }`}
+            >
+              Instant (÷3)
+            </button>
           </div>
 
           {/* Biga table */}
           <div className="mb-4">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Biga</h3>
-            <div className="bg-[#0D1014] rounded-xl overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[#1e2a36]">
-                    <th className="text-left py-2 px-3 text-gray-400 font-medium">Ingredient</th>
-                    <th className="text-right py-2 px-3 text-gray-400 font-medium">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-[#1e2a36]">
-                    <td className="py-2 px-3 text-white">🌾 Flour</td>
-                    <td className="py-2 px-3 text-white text-right font-medium">{round(Fb)}g</td>
-                  </tr>
-                  <tr className="border-b border-[#1e2a36]">
-                    <td className="py-2 px-3 text-white">💧 Water</td>
-                    <td className="py-2 px-3 text-white text-right font-medium">{round(Wb)}g</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 px-3 text-white">🧬 Yeast ({yeastTypeLabel})</td>
-                    <td className="py-2 px-3 text-white text-right font-medium">{round(Yb)}g</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[#1e2a36]">
+                  <th className="text-left py-2 text-gray-500 font-normal text-xs uppercase tracking-wider" colSpan={2}>Biga</th>
+                  <th className="text-right py-2 text-gray-500 font-normal text-xs uppercase tracking-wider">g</th>
+                </tr>
+              </thead>
+              <tbody className="font-mono">
+                <tr className="border-b border-dashed border-[#1e2a36]">
+                  <td className="py-2 text-gray-300">Flour</td>
+                  <td className="py-2 text-gray-500 text-xs">100%</td>
+                  <td className="py-2 text-white text-right font-semibold">{round(Fb)}</td>
+                </tr>
+                <tr className="border-b border-dashed border-[#1e2a36]">
+                  <td className="py-2 text-gray-300">Water</td>
+                  <td className="py-2 text-gray-500 text-xs">{bigaHyd}%</td>
+                  <td className="py-2 text-white text-right font-semibold">{round(Wb)}</td>
+                </tr>
+                <tr className="border-b border-dashed border-[#1e2a36]">
+                  <td className="py-2 text-gray-300">{useFreshYeast ? 'Fresh yeast' : 'Instant yeast'}</td>
+                  <td className="py-2 text-gray-500 text-xs">{round(useFreshYeast ? bigaYeast : bigaYeast / 3, 2)}%</td>
+                  <td className="py-2 text-white text-right font-semibold">{round(useFreshYeast ? Yb : Yb / 3)}</td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-gray-300 font-semibold" colSpan={2}>Biga total</td>
+                  <td className="py-2 text-white text-right font-bold">{round(Fb + Wb + Yb)}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           {/* Final mix table */}
           <div className="mb-4">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Final Mix</h3>
-            <div className="bg-[#0D1014] rounded-xl overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[#1e2a36]">
-                    <th className="text-left py-2 px-3 text-gray-400 font-medium">Ingredient</th>
-                    <th className="text-right py-2 px-3 text-gray-400 font-medium">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-[#1e2a36]">
-                    <td className="py-2 px-3 text-white">🌾 Flour</td>
-                    <td className="py-2 px-3 text-white text-right font-medium">{round(Ff)}g</td>
-                  </tr>
-                  <tr className="border-b border-[#1e2a36]">
-                    <td className="py-2 px-3 text-white">💧 Water</td>
-                    <td className="py-2 px-3 text-white text-right font-medium">{round(Wf)}g</td>
-                  </tr>
-                  <tr className="border-b border-[#1e2a36]">
-                    <td className="py-2 px-3 text-white">🧂 Salt</td>
-                    <td className="py-2 px-3 text-white text-right font-medium">{round(Sf)}g</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 px-3 text-white">🫗 Biga (from above)</td>
-                    <td className="py-2 px-3 text-[#FF6A2C] text-right font-medium">{round(Fb + Wb + Yb)}g</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[#1e2a36]">
+                  <th className="text-left py-2 text-gray-500 font-normal text-xs uppercase tracking-wider" colSpan={2}>Final mix</th>
+                  <th className="text-right py-2 text-gray-500 font-normal text-xs uppercase tracking-wider">g</th>
+                </tr>
+              </thead>
+              <tbody className="font-mono">
+                <tr className="border-b border-dashed border-[#1e2a36]">
+                  <td className="py-2 text-gray-300">Mature biga</td>
+                  <td className="py-2 text-gray-500 text-xs">—</td>
+                  <td className="py-2 text-white text-right font-semibold">{round(Fb + Wb + Yb)}</td>
+                </tr>
+                <tr className="border-b border-dashed border-[#1e2a36]">
+                  <td className="py-2 text-gray-300">Flour</td>
+                  <td className="py-2 text-gray-500 text-xs">{round(100 - bigaPct)}%</td>
+                  <td className="py-2 text-white text-right font-semibold">{round(Ff)}</td>
+                </tr>
+                <tr className="border-b border-dashed border-[#1e2a36]">
+                  <td className="py-2 text-gray-300">Water</td>
+                  <td className="py-2 text-gray-500 text-xs">{round(finalHyd - bigaHyd * bigaPct / 100, 1)}%</td>
+                  <td className="py-2 text-white text-right font-semibold">{round(Wf)}</td>
+                </tr>
+                <tr className="border-b border-dashed border-[#1e2a36]">
+                  <td className="py-2 text-gray-300">Salt</td>
+                  <td className="py-2 text-gray-500 text-xs">{salt}%</td>
+                  <td className="py-2 text-white text-right font-semibold">{round(Sf)}</td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-gray-300 font-semibold" colSpan={2}>{balls} × {ballW}g</td>
+                  <td className="py-2 text-white text-right font-bold">{round(target)}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           {/* Fine-tuning */}
@@ -373,28 +329,28 @@ export default function Pizza() {
             <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-300 transition-colors">
               Fine-tune baker's percentages...
             </summary>
-            <div className="mt-3 space-y-3">
+            <div className="mt-3 grid grid-cols-3 gap-2">
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Biga hydration (%)</label>
-                <input type="number" min="0" max="100" step="0.1" placeholder={BIGA_HYD_DEFAULT}
+                <label className="block text-xs text-gray-500 uppercase tracking-wider mb-1">Biga hydr.</label>
+                <input type="number" min="0" max="100" step="1" placeholder={BIGA_HYD_DEFAULT}
                   value={bigaHydFine}
                   onChange={(e) => setBigaHydFine(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-sm focus:outline-none focus:border-[#FF6A2C]" />
+                  className="w-full px-2 py-1.5 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-sm text-center font-mono focus:outline-none focus:border-[#FF6A2C]" />
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Biga yeast (%)</label>
-                <input type="number" min="0" max="5" step="0.01"
+                <label className="block text-xs text-gray-500 uppercase tracking-wider mb-1">Biga yeast</label>
+                <input type="number" min="0" max="5" step="0.05"
                   placeholder={useFreshYeast ? BIGA_YEAST_DEFAULT_FRESH : BIGA_YEAST_DEFAULT_INSTANT}
                   value={bigaYeastFine}
                   onChange={(e) => setBigaYeastFine(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-sm focus:outline-none focus:border-[#FF6A2C]" />
+                  className="w-full px-2 py-1.5 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-sm text-center font-mono focus:outline-none focus:border-[#FF6A2C]" />
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Salt (%)</label>
+                <label className="block text-xs text-gray-500 uppercase tracking-wider mb-1">Salt</label>
                 <input type="number" min="0" max="10" step="0.1" placeholder={SALT_DEFAULT}
                   value={saltFine}
                   onChange={(e) => setSaltFine(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-sm focus:outline-none focus:border-[#FF6A2C]" />
+                  className="w-full px-2 py-1.5 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-sm text-center font-mono focus:outline-none focus:border-[#FF6A2C]" />
               </div>
             </div>
           </details>
@@ -402,10 +358,10 @@ export default function Pizza() {
           {/* Copy button */}
           <button
             onClick={handleCopy}
-            className="w-full py-2.5 bg-[#FF6A2C] hover:bg-[#e55a1f] text-white rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-colors"
+            className="w-full py-3 bg-[#FF6A2C] hover:bg-[#e55a1f] text-[#160A03] rounded-xl font-semibold text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-colors"
           >
             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            {copied ? 'Copied!' : 'Copy Recipe'}
+            {copied ? 'Copied!' : 'Copy recipe'}
           </button>
         </section>
 
@@ -415,47 +371,72 @@ export default function Pizza() {
             <Clock className="w-5 h-5 text-[#FF6A2C]" /> Schedule
           </h2>
           <div className="mb-4">
-            <label className="block text-sm text-gray-400 mb-1">Bake time</label>
-            <input type="time" value={bakeTimeStr}
-              onChange={(e) => setBakeTimeStr(e.target.value)}
-              className="w-full px-3 py-2 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-sm focus:outline-none focus:border-[#FF6A2C]" />
+            <label className="block text-sm text-gray-400 mb-1">First pizza in the oven</label>
+            <input
+              type="datetime-local"
+              value={bakeDateTimeStr}
+              onChange={(e) => setBakeDateTimeStr(e.target.value)}
+              className="w-full px-3 py-2.5 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-sm font-mono focus:outline-none focus:border-[#FF6A2C]"
+            />
           </div>
 
           {schedule ? (
             <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#FF6A2C] flex items-center justify-center text-white text-sm font-bold shrink-0">1</div>
-                <div className="flex-1 bg-[#0D1014] rounded-xl p-3">
-                  <div className="text-xs text-gray-500">Mix biga</div>
-                  <div className="text-white font-semibold">{formatScheduleTime(schedule.bigaMixTime)}</div>
-                  <div className="text-xs text-gray-500 mt-1">Combine flour, water, and yeast. Knead briefly.</div>
+              <div className="grid grid-cols-[88px_1fr] gap-3 items-start py-2.5 border-b border-dashed border-[#1e2a36]">
+                <div className="font-mono text-sm font-semibold">
+                  {formatDateTime(schedule.bigaMixTime).split(' ')[0]}
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wider font-normal">
+                    {schedule.bigaMixTime.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-white">Mix biga</div>
+                  <div className="text-xs text-gray-500 font-mono mt-0.5">
+                    {round(Fb)}g flour · {round(Wb)}g water · {round(useFreshYeast ? Yb : Yb / 3)}g {useFreshYeast ? 'fresh yeast' : 'instant yeast'} — crumble, don't knead
+                  </div>
+                  <div className="text-xs text-gray-500 font-mono">{bigaTime}h at {bigaTemp}°C</div>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#FF6A2C] flex items-center justify-center text-white text-sm font-bold shrink-0">2</div>
-                <div className="flex-1 bg-[#0D1014] rounded-xl p-3">
-                  <div className="text-xs text-gray-500">Final mix</div>
-                  <div className="text-white font-semibold">{formatScheduleTime(schedule.finalMixTime)}</div>
-                  <div className="text-xs text-gray-500 mt-1">Add biga + remaining flour, water, salt. Knead until smooth.</div>
+              <div className="grid grid-cols-[88px_1fr] gap-3 items-start py-2.5 border-b border-dashed border-[#1e2a36]">
+                <div className="font-mono text-sm font-semibold">
+                  {formatDateTime(schedule.finalMixTime).split(' ')[0]}
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wider font-normal">
+                    {schedule.finalMixTime.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-white">Final mix</div>
+                  <div className="text-xs text-gray-500 font-mono mt-0.5">
+                    add {round(Ff)}g flour · {round(Wf)}g water · {round(Sf)}g salt — ball up within 1–2 h
+                  </div>
+                  <div className="text-xs text-gray-500 font-mono">{finalTime}h at {finalTemp}°C</div>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#FF6A2C] flex items-center justify-center text-white text-sm font-bold shrink-0">3</div>
-                <div className="flex-1 bg-[#0D1014] rounded-xl p-3">
-                  <div className="text-xs text-gray-500">Bake</div>
-                  <div className="text-white font-semibold">{formatScheduleTime(schedule.bakeTime)}</div>
-                  <div className="text-xs text-gray-500 mt-1">Divide into {balls} balls. Shape, top, and bake.</div>
+              <div className="grid grid-cols-[88px_1fr] gap-3 items-start py-2.5">
+                <div className="font-mono text-sm font-semibold">
+                  {formatDateTime(schedule.bakeTime).split(' ')[0]}
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wider font-normal">
+                    {schedule.bakeTime.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-white">Bake</div>
+                  <div className="text-xs text-gray-500 font-mono mt-0.5">
+                    stretch by hand, 60–90 s at 430–480°C
+                  </div>
+                  <div className="text-xs text-gray-500 font-mono">{balls} pizzas</div>
                 </div>
               </div>
             </div>
           ) : (
-            <p className="text-gray-500 text-sm text-center py-4">Enter a bake time to see the schedule</p>
+            <p className="text-gray-500 text-sm text-center py-4">Set a bake date & time to see the schedule</p>
           )}
         </section>
 
         {/* Footer */}
-        <p className="text-center text-xs text-gray-600 italic pb-4">
-          2% buffer included · Equivalence formula: h × 2^((T−18)/10)
+        <p className="text-center text-xs text-gray-600 italic pb-4 font-mono">
+          Fermentation rate roughly doubles per 10°C, so each stage is shown as equivalent hours at 18°C.<br />
+          Below ~10°C it flatters the real activity. A planning aid, not a verdict — watch the dough.
         </p>
       </div>
     </div>
