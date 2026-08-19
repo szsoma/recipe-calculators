@@ -8,9 +8,9 @@ const accent = 'orange'
 const PER_PERSON = { teszta: 100, krumpli: 215, szalonna: 50 }
 
 const INGREDIENTS = [
-  { key: 'teszta', label: 'Tészta', color: '#C4874A', unit: 'g', emoji: '🍝' },
-  { key: 'krumpli', label: 'Krumpli', color: '#7A9E5B', unit: 'g', emoji: '🥔' },
-  { key: 'szalonna', label: 'Szalonna', color: '#C0504A', unit: 'g', emoji: '🥓' },
+  { key: 'teszta', label: 'Pasta', color: '#C4874A', unit: 'g', emoji: '🍝' },
+  { key: 'krumpli', label: 'Potato', color: '#7A9E5B', unit: 'g', emoji: '🥔' },
+  { key: 'szalonna', label: 'Bacon', color: '#C0504A', unit: 'g', emoji: '🥓' },
 ]
 
 function calcFromPeople(people) {
@@ -59,7 +59,7 @@ export default function Slambuc() {
               mode === 'people' ? 'bg-orange-700 text-white' : 'text-gray-600'
             }`}
           >
-            👥 Személyek
+            👥 People
           </button>
           <button
             onClick={() => setMode('ingredient')}
@@ -67,7 +67,7 @@ export default function Slambuc() {
               mode === 'ingredient' ? 'bg-orange-700 text-white' : 'text-gray-600'
             }`}
           >
-            ⚖️ Alapanyag
+            ⚖️ Ingredient
           </button>
         </div>
 
@@ -76,7 +76,7 @@ export default function Slambuc() {
           {mode === 'people' ? (
             <>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Személyek száma
+                Number of people
               </label>
               <div className="flex items-center gap-3">
                 <button
@@ -111,14 +111,14 @@ export default function Slambuc() {
                 className="w-full mt-4 accent-orange-700"
               />
               <div className="flex justify-between text-xs text-gray-400 mt-1">
-                <span>1 fő</span>
-                <span>50 fő</span>
+                <span>1 person</span>
+                <span>50 people</span>
               </div>
             </>
           ) : (
             <>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Alapanyag és mennyiség
+                Ingredient & amount
               </label>
               <div className="grid grid-cols-3 gap-2 mb-4">
                 {INGREDIENTS.map((ing) => (
@@ -174,7 +174,7 @@ export default function Slambuc() {
                       {ing.label}
                     </div>
                     <div className={`text-xs ${isSelected ? 'text-orange-300' : 'text-gray-400'}`}>
-                      {PER_PERSON[ing.key]}g / fő
+                      {PER_PERSON[ing.key]}g / person
                     </div>
                   </div>
                 </div>
@@ -189,21 +189,21 @@ export default function Slambuc() {
         {/* Summary */}
         <div className="bg-gray-100 rounded-2xl p-4 flex justify-between items-center border border-gray-200">
           <div>
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Összesen</div>
+            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</div>
             <div className="text-xl font-bold text-gray-900 mt-1">
               {formatNum(results.teszta + results.krumpli + results.szalonna)}
             </div>
           </div>
           <div className="text-right">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">~Személyek</div>
+            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">~People</div>
             <div className="text-xl font-bold text-gray-900 mt-1">
-              {Number.isInteger(peopleDisplay) ? peopleDisplay : peopleDisplay.toFixed(1)} fő
+              {Number.isInteger(peopleDisplay) ? peopleDisplay : peopleDisplay.toFixed(1)}
             </div>
           </div>
         </div>
 
         <p className="text-center text-xs text-gray-400 italic">
-          Alap arány: 100g tészta · 215g krumpli · 50g szalonna / fő
+          Base ratio: 100g pasta · 215g potato · 50g bacon / person
         </p>
       </div>
     </PageContainer>
