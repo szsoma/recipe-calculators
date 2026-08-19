@@ -13,11 +13,13 @@ export default function IngredientInput({
   accent = 'amber',
   badge = null,
 }) {
+  const inputId = `ingredient-${label.toLowerCase().replace(/\s+/g, '-')}`
+
   return (
     <div className="flex items-center gap-3">
       <span className="text-2xl">{icon}</span>
       <div className="flex-1">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-1">
           {label}
           {badge && (
             <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full font-bold">
@@ -27,6 +29,7 @@ export default function IngredientInput({
         </label>
         <div className="flex gap-2">
           <input
+            id={inputId}
             type="number"
             value={value}
             onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
