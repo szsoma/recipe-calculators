@@ -47,6 +47,13 @@ function NumberInput({ label, value, onChange, min, max, step, unit }) {
     <div>
       <label className="block text-sm text-gray-400 mb-1">{label}</label>
       <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onChange(clamp(value - step, min, max))}
+          className="w-11 h-11 rounded-lg bg-[#0D1014] border border-[#1e2a36] text-white text-lg font-bold flex items-center justify-center active:bg-[#1e2a36] transition-colors"
+        >
+          −
+        </button>
         <input
           type="number"
           min={min}
@@ -57,9 +64,16 @@ function NumberInput({ label, value, onChange, min, max, step, unit }) {
             const n = parseFloat(e.target.value)
             if (!isNaN(n)) onChange(clamp(n, min, max))
           }}
-          className="flex-1 px-3 py-2.5 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-sm font-mono text-center focus:outline-none focus:border-[#FF6A2C]"
+          className="flex-1 px-2 py-2.5 bg-[#0D1014] border border-[#1e2a36] rounded-lg text-white text-sm font-mono text-center focus:outline-none focus:border-[#FF6A2C]"
         />
-        {unit && <span className="text-gray-400 text-sm w-8">{unit}</span>}
+        <button
+          type="button"
+          onClick={() => onChange(clamp(value + step, min, max))}
+          className="w-11 h-11 rounded-lg bg-[#0D1014] border border-[#1e2a36] text-white text-lg font-bold flex items-center justify-center active:bg-[#1e2a36] transition-colors"
+        >
+          +
+        </button>
+        {unit && <span className="text-gray-400 text-sm w-6">{unit}</span>}
       </div>
     </div>
   )
