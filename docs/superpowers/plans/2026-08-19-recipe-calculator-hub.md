@@ -1285,7 +1285,11 @@ git commit -m "feat: add Slambuc calculator with people/ingredient modes"
 
 ---
 
-### Task 11: Pizza Placeholder
+### Task 11: Pizza Calculator — Biga Bench
+
+**Goal:** Convert the Biga Bench pizza dough calculator from vanilla HTML/JS to React, integrating it with the project's shared components and design system.
+
+**Reference:** The original calculator is provided as `biga-bench.html` — a complete vanilla HTML/JS pizza dough calculator with dark theme, sliders, recipe calculations, fermentation feedback, and schedule feature.
 
 **Files:**
 - Create: `src/pages/Pizza.jsx`
@@ -1293,9 +1297,31 @@ git commit -m "feat: add Slambuc calculator with people/ingredient modes"
 
 **Interfaces:**
 - Consumes: Header, PageContainer
-- Produces: Placeholder page with coming soon message
+- Produces: Full pizza dough calculator with batch, biga, final dough, recipe, and schedule sections
 
-- [ ] **Step 1: Create Pizza placeholder page**
+**Key Features to Implement:**
+1. **Batch Section:** Pizza balls count (1-40) and ball weight (150-400g) inputs
+2. **Biga Section:** Share of total flour (10-100%), temperature (4-30°C), time (4-48h) with fermentation feedback
+3. **Final Dough Section:** Hydration (55-85%), temperature (4-30°C), time (1-72h) with fermentation feedback
+4. **Recipe Section:** Biga and final mix ingredient tables, yeast type toggle (fresh/instant), fine-tuning inputs for biga hydration, biga yeast, salt
+5. **Schedule Section:** Bake time input with step-by-step schedule (Mix biga → Final mix → Bake)
+6. **Copy Recipe:** Clipboard copy of formatted recipe
+
+**Design Notes:**
+- The Biga Bench has its own dark theme (`--bg:#0D1014`, `--hot:#FF6A2C`) — this is intentional and should be preserved
+- Keep the dark theme for the Pizza page (it's a separate tool aesthetic)
+- Use lucide-react icons for UI elements, keep the calculator's existing emoji/icon scheme
+- Maintain the calculator's responsive layout (max-width: 640px centered)
+- Preserve all calculation logic, feedback messages, and schedule generation from the original
+
+**Calculation Logic (from original):**
+- `target = balls × ballW × 1.02` (2% buffer)
+- `F = target / (1 + finalHyd/100 + salt/100 + (bigaYeast/100) × bigaPct/100)`
+- Biga: `Fb = F × bigaPct/100`, `Wb = Fb × bigaHyd/100`, `Yb = Fb × bigaYeast/100`
+- Final: `Ff = F - Fb`, `Wf = F × finalHyd/100 - Wb`, `Sf = F × salt/100`
+- Equivalence hours: `eq(h, t) = h × 2^((t-18)/10)`
+
+- [ ] **Step 1: Create Pizza page with Biga Bench calculator**
 
 ```jsx
 import Header from '../components/Header'

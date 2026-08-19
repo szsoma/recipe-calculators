@@ -18,9 +18,9 @@ const calculators = [
   },
   {
     name: 'Pizza',
-    description: 'Coming soon',
+    description: 'Biga Bench dough calc',
     icon: '🍕',
-    path: null,
+    path: '/pizza',
     accent: 'hover:border-red-300',
   },
 ]

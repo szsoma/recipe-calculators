@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom'
 import Hub from './pages/Hub'
 import Kombucha from './pages/Kombucha'
 import Slambuc from './pages/Slambuc'
+import Pizza from './pages/Pizza'
 
 export default function App() {
   return (
@@ -9,7 +10,7 @@ export default function App() {
       <Route path="/" element={<Hub />} />
       <Route path="/kombucha" element={<Kombucha />} />
       <Route path="/slambuc" element={<Slambuc />} />
-      <Route path="/pizza" element={<div className="p-8 text-center">Pizza</div>} />
+      <Route path="/pizza" element={<Pizza />} />
     </Routes>
   )
 }
