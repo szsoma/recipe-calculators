@@ -23,7 +23,6 @@ function readAll() {
   const raw = read(STORAGE_KEY)
   if (!Array.isArray(raw)) return []
   const migrated = raw.map(migrateRecipe)
-  skipped = migrated.filter((r) => r === null).length
   return migrated.filter(Boolean)
 }
 
@@ -32,7 +31,15 @@ function writeAll(recipes) {
 }
 
 export function list() {
-  return readAll().sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))
+  const raw = read(STORAGE_KEY)
+  if (!Array.isArray(raw)) {
+    skipped = 0
+    return []
+  }
+  const migrated = raw.map(migrateRecipe)
+  skipped = migrated.filter((r) => r === null).length
+  const records = migrated.filter(Boolean)
+  return records.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))
 }
 
 export function get(id) {
@@ -48,7 +55,7 @@ export function save({ id, name, note = '', params }) {
   const timestamp = now()
 
   const record = {
-    id: existing ? existing.id : (id ?? newId()),
+    id: existing ? existing.id : newId(),
     name: trimmed,
     note: typeof note === 'string' ? note : '',
     createdAt: existing ? existing.createdAt : timestamp,

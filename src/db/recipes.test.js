@@ -80,4 +80,27 @@ describe('recipes', () => {
     expect(importRecipe({ nope: 1 })).toBeNull()
     expect(importRecipe(null)).toBeNull()
   })
+
+  it('saves with a stale id generates a fresh id instead of resurrecting the record', () => {
+    const first = save({ name: 'Recipe', params })
+    const staleId = first.id
+    remove(staleId)
+    expect(get(staleId)).toBeNull()
+    const resurrected = save({ id: staleId, name: 'Resurrected', params })
+    expect(resurrected.id).not.toBe(staleId)
+    expect(get(staleId)).toBeNull()
+    expect(get(resurrected.id)).not.toBeNull()
+    expect(list()).toHaveLength(1)
+  })
+
+  it('skippedCount reflects only list() calls, not get() or save()', () => {
+    const good = save({ name: 'Good', params })
+    write(STORAGE_KEY, [{ garbage: true }, good, null])
+    list()
+    expect(skippedCount()).toBe(2)
+    get('any-id')
+    expect(skippedCount()).toBe(2)
+    save({ name: 'Another', params })
+    expect(skippedCount()).toBe(2)
+  })
 })
