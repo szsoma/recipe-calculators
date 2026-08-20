@@ -21,7 +21,7 @@ const FERMENTATION_COLOR = {
   extended: 'text-purple-600',
 }
 
-export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, setBakeDateTimeStr, footer }) {
+export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, setBakeDateTimeStr, loadedRecipe, isDirty, footer }) {
   const [copied, setCopied] = useState(false)
 
   const { balls, ballW, bigaPct, bigaTemp, bigaTime, finalHyd, finalTemp, finalTime, useFreshYeast } = params
@@ -43,6 +43,18 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto space-y-5">
+
+      {loadedRecipe && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="font-semibold text-ink">{loadedRecipe.name}</span>
+          {isDirty && (
+            <span className="inline-flex items-center gap-1 text-xs text-ink-muted">
+              <span className="w-1.5 h-1.5 rounded-full bg-pizza" aria-hidden="true" />
+              unsaved changes
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Batch */}
       <Card>
