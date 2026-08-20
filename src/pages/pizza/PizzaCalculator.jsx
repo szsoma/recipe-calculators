@@ -120,7 +120,7 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
         <div className="flex gap-1 bg-sunken p-1 rounded-lg mb-4">
           <button
             onClick={() => setParam('useFreshYeast', true)}
-            className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+            className={`flex-1 min-h-11 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
               useFreshYeast ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted'
             }`}
           >
@@ -128,7 +128,7 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
           </button>
           <button
             onClick={() => setParam('useFreshYeast', false)}
-            className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+            className={`flex-1 min-h-11 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
               !useFreshYeast ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted'
             }`}
           >
