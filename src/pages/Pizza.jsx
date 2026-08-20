@@ -3,45 +3,32 @@ import Header from '../components/Header'
 import PageContainer from '../components/PageContainer'
 import Card from '../components/Card'
 import { Copy, Clock, Check } from 'lucide-react'
+import {
+  SALT_DEFAULT,
+  BIGA_HYD_DEFAULT,
+  BIGA_YEAST_DEFAULT_FRESH,
+  BIGA_YEAST_DEFAULT_INSTANT,
+  FINAL_HYD_DEFAULT,
+  BIGA_PCT_DEFAULT,
+  clamp,
+  round,
+  computeDough,
+  computeSchedule,
+  buildRecipeText,
+  fermentationLevel,
+  FERMENTATION_TEXT,
+  formatDateTime,
+} from '../lib/pizza'
 
 const accent = 'red'
 
-const SALT_DEFAULT = 2.7
-const BIGA_HYD_DEFAULT = 42
-const BIGA_YEAST_DEFAULT_FRESH = 1
-const BIGA_YEAST_DEFAULT_INSTANT = 0.3
-const FINAL_HYD_DEFAULT = 65
-const BIGA_PCT_DEFAULT = 30
-
-function clamp(v, min, max) {
-  return Math.min(max, Math.max(min, v))
-}
-
-function round(v) {
-  return Math.round(v * 10) / 10
-}
-
-function eq(hours, temp) {
-  return hours * Math.pow(2, (temp - 18) / 10)
-}
-
-function getFermentationLabel(eqHours) {
-  if (eqHours < 2) return { text: 'Very short — minimal flavor development', color: 'text-red-600' }
-  if (eqHours < 6) return { text: 'Short — mild fermentation flavor', color: 'text-yellow-600' }
-  if (eqHours < 12) return { text: 'Medium — good flavor balance', color: 'text-green-600' }
-  if (eqHours < 24) return { text: 'Long — complex, developed flavor', color: 'text-green-700' }
-  if (eqHours < 48) return { text: 'Very long — deep, artisan flavor', color: 'text-blue-600' }
-  return { text: 'Extended — very deep, sour notes possible', color: 'text-purple-600' }
-}
-
-function formatDateTime(date) {
-  const day = date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
-  const time = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-  return `${time} ${day}`
-}
-
-function addHours(date, hours) {
-  return new Date(date.getTime() + hours * 3600000)
+const FERMENTATION_COLOR = {
+  'very-short': 'text-red-600',
+  short: 'text-yellow-600',
+  medium: 'text-green-600',
+  long: 'text-green-700',
+  'very-long': 'text-blue-600',
+  extended: 'text-purple-600',
 }
 
 function NumberInput({ label, value, onChange, min, max, step, unit }) {
@@ -106,75 +93,23 @@ export default function Pizza() {
   const [bakeDateTimeStr, setBakeDateTimeStr] = useState('')
   const [copied, setCopied] = useState(false)
 
-  const salt = saltFine !== '' ? parseFloat(saltFine) : SALT_DEFAULT
-  const bigaHyd = bigaHydFine !== '' ? parseFloat(bigaHydFine) : BIGA_HYD_DEFAULT
-  const bigaYeast = bigaYeastFine !== ''
-    ? parseFloat(bigaYeastFine)
-    : useFreshYeast
-      ? BIGA_YEAST_DEFAULT_FRESH
-      : BIGA_YEAST_DEFAULT_INSTANT
+  const params = {
+    balls, ballW, bigaPct, bigaTemp, bigaTime,
+    finalHyd, finalTemp, finalTime, useFreshYeast,
+    bigaHydFine, bigaYeastFine, saltFine,
+    bakeDateTimeStr,
+  }
+  const d = computeDough(params)
+  const { salt, bigaHyd, bigaYeast, F, Fb, Wb, Yb, Ff, Wf, Sf, bigaEq, finalEq, target } = d
+  const schedule = computeSchedule(params, bakeDateTimeStr)
 
-  const target = balls * ballW * 1.02
-  const F = target / (1 + finalHyd / 100 + salt / 100 + (bigaYeast / 100) * bigaPct / 100)
-
-  const Fb = F * bigaPct / 100
-  const Wb = Fb * bigaHyd / 100
-  const Yb = Fb * bigaYeast / 100
-
-  const Ff = F - Fb
-  const Wf = F * finalHyd / 100 - Wb
-  const Sf = F * salt / 100
-
-  const bigaEq = eq(bigaTime, bigaTemp)
-  const finalEq = eq(finalTime, finalTemp)
-
-  const bigaFerm = getFermentationLabel(bigaEq)
-  const finalFerm = getFermentationLabel(finalEq)
+  const bigaLevel = fermentationLevel(bigaEq)
+  const finalLevel = fermentationLevel(finalEq)
 
   const yeastTypeLabel = useFreshYeast ? 'Fresh' : 'Instant'
 
-  let schedule = null
-  if (bakeDateTimeStr) {
-    const bakeTime = new Date(bakeDateTimeStr)
-    if (!isNaN(bakeTime)) {
-      const finalMixTime = addHours(bakeTime, -(finalTime))
-      const bigaMixTime = addHours(finalMixTime, -(bigaTime))
-      schedule = { bakeTime, finalMixTime, bigaMixTime }
-    }
-  }
-
-  function buildRecipeText() {
-    const lines = []
-    lines.push(`🍕 Biga Bench Recipe`)
-    lines.push(`─────────────────`)
-    lines.push(`Target: ${balls} balls × ${ballW}g = ${round(target)}g dough`)
-    lines.push(`Flour total: ${round(F)}g`)
-    lines.push(``)
-    lines.push(`── Biga (${bigaPct}%) ──`)
-    lines.push(`Flour: ${round(Fb)}g`)
-    lines.push(`Water: ${round(Wb)}g (${bigaHyd}%)`)
-    lines.push(`Yeast (${yeastTypeLabel}): ${round(Yb)}g`)
-    lines.push(``)
-    lines.push(`── Final Dough ──`)
-    lines.push(`Flour: ${round(Ff)}g`)
-    lines.push(`Water: ${round(Wf)}g`)
-    lines.push(`Salt: ${round(Sf)}g`)
-    lines.push(``)
-    lines.push(`Total: ${round(Fb + Wb + Yb + Ff + Wf + Sf)}g`)
-
-    if (schedule) {
-      lines.push(``)
-      lines.push(`── Schedule ──`)
-      lines.push(`Mix biga: ${formatDateTime(schedule.bigaMixTime)}`)
-      lines.push(`Final mix: ${formatDateTime(schedule.finalMixTime)}`)
-      lines.push(`Bake: ${formatDateTime(schedule.bakeTime)}`)
-    }
-
-    return lines.join('\n')
-  }
-
   function handleCopy() {
-    const text = buildRecipeText()
+    const text = buildRecipeText(params)
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
@@ -217,7 +152,7 @@ export default function Pizza() {
                 <span className="text-sm text-gray-500">Fermentation equivalent</span>
                 <span className="text-gray-900 font-bold">{round(bigaEq)}h @ 18°C</span>
               </div>
-              <p className={`text-xs font-medium ${bigaFerm.color}`}>{bigaFerm.text}</p>
+              <p className={`text-xs font-medium ${FERMENTATION_COLOR[bigaLevel]}`}>{FERMENTATION_TEXT[bigaLevel]}</p>
             </div>
           </div>
         </Card>
@@ -236,7 +171,7 @@ export default function Pizza() {
                 <span className="text-sm text-gray-500">Fermentation equivalent</span>
                 <span className="text-gray-900 font-bold">{round(finalEq)}h @ 18°C</span>
               </div>
-              <p className={`text-xs font-medium ${finalFerm.color}`}>{finalFerm.text}</p>
+              <p className={`text-xs font-medium ${FERMENTATION_COLOR[finalLevel]}`}>{FERMENTATION_TEXT[finalLevel]}</p>
             </div>
           </div>
         </Card>
@@ -289,8 +224,8 @@ export default function Pizza() {
                 </tr>
                 <tr className="border-b border-dashed border-gray-200">
                   <td className="py-2 text-gray-600">{useFreshYeast ? 'Fresh yeast' : 'Instant yeast'}</td>
-                  <td className="py-2 text-gray-400 text-xs">{round(useFreshYeast ? bigaYeast : bigaYeast / 3, 2)}%</td>
-                  <td className="py-2 text-gray-900 text-right font-semibold">{round(useFreshYeast ? Yb : Yb / 3)}</td>
+                  <td className="py-2 text-gray-400 text-xs">{round(d.yeastPct)}%</td>
+                  <td className="py-2 text-gray-900 text-right font-semibold">{round(d.yeastG)}</td>
                 </tr>
                 <tr>
                   <td className="py-2 text-gray-600 font-semibold" colSpan={2}>Biga total</td>
@@ -322,7 +257,7 @@ export default function Pizza() {
                 </tr>
                 <tr className="border-b border-dashed border-gray-200">
                   <td className="py-2 text-gray-600">Water</td>
-                  <td className="py-2 text-gray-400 text-xs">{round(finalHyd - bigaHyd * bigaPct / 100, 1)}%</td>
+                  <td className="py-2 text-gray-400 text-xs">{round(finalHyd - bigaHyd * bigaPct / 100)}%</td>
                   <td className="py-2 text-gray-900 text-right font-semibold">{round(Wf)}</td>
                 </tr>
                 <tr className="border-b border-dashed border-gray-200">
@@ -386,7 +321,7 @@ export default function Pizza() {
                 <div>
                   <div className="text-sm text-gray-900">Mix biga</div>
                   <div className="text-xs text-gray-500 font-mono mt-0.5">
-                    {round(Fb)}g flour · {round(Wb)}g water · {round(useFreshYeast ? Yb : Yb / 3)}g {useFreshYeast ? 'fresh yeast' : 'instant yeast'} — crumble, don't knead
+                    {round(Fb)}g flour · {round(Wb)}g water · {round(d.yeastG)}g {useFreshYeast ? 'fresh yeast' : 'instant yeast'} — crumble, don't knead
                   </div>
                   <div className="text-xs text-gray-500 font-mono">{bigaTime}h at {bigaTemp}°C</div>
                 </div>
