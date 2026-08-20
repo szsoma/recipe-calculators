@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import Header from '../components/Header'
 import PageContainer from '../components/PageContainer'
 import Tabs from '../components/Tabs'
@@ -10,6 +11,7 @@ import { DEFAULT_PIZZA_PARAMS } from '../lib/pizza'
 import { save as saveRecipe } from '../db/recipes'
 import { isPersistent } from '../db/store'
 import { PARAM_KEYS } from '../db/schema'
+import { decodeRecipe, SHARE_PARAM, ShareError } from '../lib/share'
 
 const TABS = [
   { id: 'calculator', label: 'Calculator' },
@@ -23,10 +25,29 @@ export default function Pizza() {
   const [loadedRecipe, setLoadedRecipe] = useState(null)
   const [dialog, setDialog] = useState(null) // null | 'save' | 'saveAs'
   const [saveError, setSaveError] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [shareError, setShareError] = useState('')
+  const [pendingShare, setPendingShare] = useState(null)
 
   function setParam(key, value) {
     setParams((prev) => ({ ...prev, [key]: value }))
   }
+
+  useEffect(() => {
+    const payload = searchParams.get(SHARE_PARAM)
+    if (!payload) return
+    try {
+      const shared = decodeRecipe(payload)
+      setParams(shared.params)
+      setLoadedRecipe(null)
+      setPendingShare({ name: shared.name, note: shared.note })
+    } catch (err) {
+      setShareError(err instanceof ShareError ? err.message : 'That recipe link is not readable')
+    }
+    searchParams.delete(SHARE_PARAM)
+    setSearchParams(searchParams, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const isDirty = useMemo(() => {
     if (!loadedRecipe) return false
@@ -47,6 +68,12 @@ export default function Pizza() {
     } catch (err) {
       setSaveError(err.message || 'Could not save recipe.')
     }
+  }
+
+  function handleLoad(recipe) {
+    setParams(recipe.params)
+    setLoadedRecipe(recipe)
+    setTab('calculator')
   }
 
   function handleOverwrite() {
@@ -100,6 +127,26 @@ export default function Pizza() {
         </div>
       </div>
 
+      {shareError && <p className="px-4 py-2 text-sm text-red-600 text-center">{shareError}</p>}
+      {pendingShare && (
+        <div className="px-4 py-3 max-w-lg mx-auto flex items-center gap-3">
+          <p className="flex-1 text-sm text-ink">
+            Loaded <span className="font-semibold">{pendingShare.name}</span> from a link.
+          </p>
+          <Button
+            variant="primary"
+            accent="pizza"
+            size="sm"
+            onClick={() => {
+              handleSaveNew(pendingShare)
+              setPendingShare(null)
+            }}
+          >
+            Save to my recipes
+          </Button>
+        </div>
+      )}
+
       {tab === 'calculator' ? (
         <PizzaCalculator
           params={params}
@@ -111,7 +158,7 @@ export default function Pizza() {
           footer={saveFooter}
         />
       ) : (
-        <PizzaRecipes />
+        <PizzaRecipes onLoad={handleLoad} />
       )}
 
       <SaveRecipeDialog
