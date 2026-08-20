@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { list, get, save, remove, duplicate, importRecipe, skippedCount, STORAGE_KEY } from './recipes'
-import { write } from './store'
+import { read, write } from './store'
 import { SCHEMA_VERSION } from './schema'
 
 const params = { balls: 6, ballW: 280, finalHyd: 70 }
@@ -102,5 +102,74 @@ describe('recipes', () => {
     expect(skippedCount()).toBe(2)
     save({ name: 'Another', params })
     expect(skippedCount()).toBe(2)
+  })
+
+  describe('unreadable entries are preserved, never rewritten', () => {
+    const future = {
+      id: 'future-1',
+      name: 'From a newer build',
+      note: '',
+      createdAt: '2026-08-20T10:00:00.000Z',
+      updatedAt: '2026-08-20T10:00:00.000Z',
+      schemaVersion: SCHEMA_VERSION + 1,
+      params: { balls: 4, brandNewField: 'x' },
+    }
+    const corrupt = { garbage: true }
+
+    function seed() {
+      const good = save({ name: 'Good', params })
+      write(STORAGE_KEY, [future, good, corrupt])
+      return good
+    }
+
+    function rawEntries() {
+      return read(STORAGE_KEY)
+    }
+
+    it('survive an unrelated save()', () => {
+      seed()
+      save({ name: 'Another', params })
+      const raw = rawEntries()
+      expect(raw).toContainEqual(future)
+      expect(raw).toContainEqual(corrupt)
+      expect(list().map((r) => r.name).sort()).toEqual(['Another', 'Good'])
+      expect(skippedCount()).toBe(2)
+    })
+
+    it('survive an overwrite of an existing record', () => {
+      const good = seed()
+      save({ id: good.id, name: 'Good', params: { ...params, balls: 9 } })
+      const raw = rawEntries()
+      expect(raw).toContainEqual(future)
+      expect(raw).toContainEqual(corrupt)
+      expect(get(good.id).params.balls).toBe(9)
+    })
+
+    it('survive a remove()', () => {
+      const good = seed()
+      remove(good.id)
+      const raw = rawEntries()
+      expect(raw).toContainEqual(future)
+      expect(raw).toContainEqual(corrupt)
+      expect(list()).toEqual([])
+    })
+
+    it('survive a duplicate()', () => {
+      const good = seed()
+      expect(duplicate(good.id)).not.toBeNull()
+      const raw = rawEntries()
+      expect(raw).toContainEqual(future)
+      expect(raw).toContainEqual(corrupt)
+      expect(list()).toHaveLength(2)
+    })
+
+    it('survive a whole save/remove round trip', () => {
+      seed()
+      const extra1 = save({ name: 'Extra', params })
+      remove(extra1.id)
+      const raw = rawEntries()
+      expect(raw).toContainEqual(future)
+      expect(raw).toContainEqual(corrupt)
+    })
   })
 })

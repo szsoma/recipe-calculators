@@ -7,7 +7,9 @@ const STEPS = {}
 export function migrateRecipe(record) {
   if (!isValidRecipe(record)) return null
 
-  let version = Number.isFinite(record.schemaVersion) ? record.schemaVersion : 1
+  const declared = record.schemaVersion === undefined ? 1 : Number(record.schemaVersion)
+  if (!Number.isFinite(declared)) return null
+  let version = declared
   if (version > SCHEMA_VERSION) return null
 
   let out = record

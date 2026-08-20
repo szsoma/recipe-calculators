@@ -19,15 +19,27 @@ export function skippedCount() {
   return skipped
 }
 
-function readAll() {
+function partition() {
   const raw = read(STORAGE_KEY)
-  if (!Array.isArray(raw)) return []
-  const migrated = raw.map(migrateRecipe)
-  return migrated.filter(Boolean)
+  if (!Array.isArray(raw)) return { records: [], preserved: [] }
+  const records = []
+  const preserved = []
+  for (const entry of raw) {
+    const migrated = migrateRecipe(entry)
+    if (migrated) records.push(migrated)
+    else if (entry && typeof entry === 'object') preserved.push(entry)
+  }
+  return { records, preserved }
 }
 
-function writeAll(recipes) {
-  write(STORAGE_KEY, recipes)
+function readAll() {
+  return partition().records
+}
+
+// Unreadable entries (corrupt rows, or records written by a newer build) are kept
+// byte-for-byte at the end of the array so an older build can never destroy them.
+function writeAll(recipes, preserved) {
+  write(STORAGE_KEY, [...recipes, ...preserved])
 }
 
 export function list() {
@@ -50,7 +62,7 @@ export function save({ id, name, note = '', params }) {
   const trimmed = typeof name === 'string' ? name.trim() : ''
   if (trimmed === '') throw new Error('Recipe name is required')
 
-  const all = readAll()
+  const { records: all, preserved } = partition()
   const existing = id ? all.find((r) => r.id === id) : null
   const timestamp = now()
 
@@ -65,12 +77,16 @@ export function save({ id, name, note = '', params }) {
   }
 
   const next = existing ? all.map((r) => (r.id === record.id ? record : r)) : [...all, record]
-  writeAll(next)
+  writeAll(next, preserved)
   return record
 }
 
 export function remove(id) {
-  writeAll(readAll().filter((r) => r.id !== id))
+  const { records, preserved } = partition()
+  writeAll(
+    records.filter((r) => r.id !== id),
+    preserved,
+  )
 }
 
 export function duplicate(id) {
