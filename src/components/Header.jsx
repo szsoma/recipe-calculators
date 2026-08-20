@@ -5,6 +5,9 @@ const accentStyles = {
   amber: 'bg-amber-500',
   orange: 'bg-orange-700',
   red: 'bg-red-500',
+  kombucha: 'bg-kombucha',
+  slambuc: 'bg-slambuc',
+  pizza: 'bg-pizza',
 }
 
 export default function Header({ icon, title, accent = 'amber' }) {
