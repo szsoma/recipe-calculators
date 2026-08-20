@@ -132,7 +132,7 @@ export function buildRecipeText(params) {
   lines.push(`── Biga (${params.bigaPct}%) ──`)
   lines.push(`Flour: ${round(d.Fb)}g`)
   lines.push(`Water: ${round(d.Wb)}g (${d.bigaHyd}%)`)
-  lines.push(`Yeast (${yeastTypeLabel}): ${round(d.Yb)}g`)
+  lines.push(`Yeast (${yeastTypeLabel}): ${round(d.yeastG)}g`)
   lines.push(``)
   lines.push(`── Final Dough ──`)
   lines.push(`Flour: ${round(d.Ff)}g`)

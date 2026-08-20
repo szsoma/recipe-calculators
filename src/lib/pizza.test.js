@@ -134,4 +134,9 @@ describe('buildRecipeText', () => {
     expect(text).toContain('Schedule')
     expect(text).toContain('Mix biga:')
   })
+
+  it('uses the displayed instant yeast amount', () => {
+    const text = buildRecipeText({ ...DEFAULT_PIZZA_PARAMS, useFreshYeast: false, bigaYeastFine: '1' })
+    expect(text).toContain('Yeast (Instant): 0.6g')
+  })
 })
