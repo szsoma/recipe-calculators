@@ -2,15 +2,11 @@ import { useState } from 'react'
 import Header from '../components/Header'
 import PageContainer from '../components/PageContainer'
 import Card from '../components/Card'
+import NumberInput from '../components/NumberInput'
 import { Copy, Clock, Check } from 'lucide-react'
 import {
-  SALT_DEFAULT,
-  BIGA_HYD_DEFAULT,
-  BIGA_YEAST_DEFAULT_FRESH,
-  BIGA_YEAST_DEFAULT_INSTANT,
   FINAL_HYD_DEFAULT,
   BIGA_PCT_DEFAULT,
-  clamp,
   round,
   computeDough,
   computeSchedule,
@@ -29,47 +25,6 @@ const FERMENTATION_COLOR = {
   long: 'text-green-700',
   'very-long': 'text-blue-600',
   extended: 'text-purple-600',
-}
-
-function NumberInput({ label, value, onChange, min, max, step, unit }) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => onChange(clamp(value - step, min, max))}
-          className="w-11 h-11 rounded-lg border-2 border-gray-200 bg-gray-50 text-lg font-bold text-gray-700 flex items-center justify-center hover:bg-gray-100 active:bg-gray-200 transition-colors"
-        >
-          −
-        </button>
-        <input
-          type="number"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={(e) => {
-            const n = parseFloat(e.target.value)
-            if (!isNaN(n)) onChange(n)
-          }}
-          onBlur={(e) => {
-            const n = parseFloat(e.target.value)
-            if (!isNaN(n)) onChange(clamp(n, min, max))
-          }}
-          className="flex-1 px-2 py-2.5 border-2 border-gray-200 bg-gray-50 rounded-lg text-gray-900 text-sm font-mono text-center focus:outline-none focus:border-red-500"
-        />
-        <button
-          type="button"
-          onClick={() => onChange(clamp(value + step, min, max))}
-          className="w-11 h-11 rounded-lg border-2 border-gray-200 bg-gray-50 text-lg font-bold text-gray-700 flex items-center justify-center hover:bg-gray-100 active:bg-gray-200 transition-colors"
-        >
-          +
-        </button>
-        {unit && <span className="text-gray-500 text-sm w-6">{unit}</span>}
-      </div>
-    </div>
-  )
 }
 
 export default function Pizza() {

@@ -1,1 +1,51 @@
 @import "tailwindcss";
+
+:root {
+  --canvas: #f6f6f7;
+  --surface: #ffffff;
+  --surface-sunken: #f1f1f3;
+  --line: #e4e4e8;
+  --ink: #16161a;
+  --ink-muted: #6c6c76;
+  --accent-kombucha: #a8761a;
+  --accent-slambuc: #b04d1c;
+  --accent-pizza: #c4341f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #0f0f12;
+    --surface: #191920;
+    --surface-sunken: #212129;
+    --line: #2c2c36;
+    --ink: #f2f2f5;
+    --ink-muted: #9a9aa6;
+    --accent-kombucha: #e0a63a;
+    --accent-slambuc: #e07a45;
+    --accent-pizza: #ef5d45;
+  }
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-sunken: var(--surface-sunken);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-kombucha: var(--accent-kombucha);
+  --color-slambuc: var(--accent-slambuc);
+  --color-pizza: var(--accent-pizza);
+}
+
+@layer base {
+  body {
+    background-color: var(--canvas);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  input[type="number"] {
+    font-variant-numeric: tabular-nums;
+  }
+}
