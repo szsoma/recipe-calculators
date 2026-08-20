@@ -1,4 +1,5 @@
 import { DEFAULT_PIZZA_PARAMS } from '../lib/pizza'
+import { DEFAULT_SOURDOUGH_PARAMS } from '../lib/sourdough'
 
 export const SCHEMA_VERSION = 1
 
@@ -48,6 +49,32 @@ export function normalizeParams(raw) {
     } else {
       out[key] = ''
     }
+  }
+  return out
+}
+
+export const SOURDOUGH_PARAM_KEYS = [
+  'bakedWeight',
+  'hydration',
+  'salt',
+  'sourdoughPct',
+  'secondFlourPct',
+]
+
+const SOURDOUGH_NUMERIC_KEYS = [
+  'bakedWeight',
+  'hydration',
+  'salt',
+  'sourdoughPct',
+  'secondFlourPct',
+]
+
+export function normalizeSourdoughParams(raw) {
+  const src = raw && typeof raw === 'object' ? raw : {}
+  const out = {}
+  for (const key of SOURDOUGH_NUMERIC_KEYS) {
+    const n = Number(src[key])
+    out[key] = Number.isFinite(n) ? n : DEFAULT_SOURDOUGH_PARAMS[key]
   }
   return out
 }

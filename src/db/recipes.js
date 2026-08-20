@@ -1,8 +1,9 @@
 import { read, write } from './store'
 import { migrateRecipe } from './migrations'
-import { SCHEMA_VERSION, isValidRecipe, normalizeParams } from './schema'
+import { SCHEMA_VERSION, isValidRecipe, normalizeParams, normalizeSourdoughParams } from './schema'
 
 export const STORAGE_KEY = 'recipes.pizza'
+export const STORAGE_KEY_SOURDOUGH = 'recipes.sourdough'
 
 function newId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
@@ -98,4 +99,51 @@ export function duplicate(id) {
 export function importRecipe(obj) {
   if (!isValidRecipe(obj)) return null
   return save({ name: obj.name, note: obj.note ?? '', params: obj.params })
+}
+
+export function listSourdough() {
+  const raw = read(STORAGE_KEY_SOURDOUGH)
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((r) => isValidRecipe(r))
+    .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))
+}
+
+export function getSourdough(id) {
+  const raw = read(STORAGE_KEY_SOURDOUGH)
+  if (!Array.isArray(raw)) return null
+  return raw.find((r) => r.id === id) ?? null
+}
+
+export function saveSourdough({ id, name, note = '', params }) {
+  const trimmed = typeof name === 'string' ? name.trim() : ''
+  if (trimmed === '') throw new Error('Recipe name is required')
+
+  const raw = read(STORAGE_KEY_SOURDOUGH)
+  const all = Array.isArray(raw) ? raw.filter((r) => isValidRecipe(r)) : []
+  const existing = id ? all.find((r) => r.id === id) : null
+  const timestamp = new Date().toISOString()
+
+  const record = {
+    id: existing ? existing.id : (globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `r-${Math.random().toString(36).slice(2)}-${performance.now().toString(36)}`),
+    name: trimmed,
+    note: typeof note === 'string' ? note : '',
+    createdAt: existing ? existing.createdAt : timestamp,
+    updatedAt: timestamp,
+    schemaVersion: SCHEMA_VERSION,
+    params: normalizeSourdoughParams(params),
+  }
+
+  const next = existing ? all.map((r) => (r.id === record.id ? record : r)) : [...all, record]
+  write(STORAGE_KEY_SOURDOUGH, next)
+  return record
+}
+
+export function removeSourdough(id) {
+  const raw = read(STORAGE_KEY_SOURDOUGH)
+  const all = Array.isArray(raw) ? raw.filter((r) => isValidRecipe(r)) : []
+  write(
+    STORAGE_KEY_SOURDOUGH,
+    all.filter((r) => r.id !== id),
+  )
 }
