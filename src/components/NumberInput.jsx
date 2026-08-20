@@ -3,9 +3,9 @@ import { clamp } from '../lib/pizza'
 export default function NumberInput({ label, value, onChange, min, max, step, unit, accent = 'pizza' }) {
   const id = `num-${label.toLowerCase().replace(/\s+/g, '-')}`
   const ring = {
-    pizza: 'focus:border-pizza',
-    kombucha: 'focus:border-kombucha',
-    slambuc: 'focus:border-slambuc',
+    pizza: 'focus:border-pizza focus-visible:outline-pizza',
+    kombucha: 'focus:border-kombucha focus-visible:outline-kombucha',
+    slambuc: 'focus:border-slambuc focus-visible:outline-slambuc',
   }[accent]
 
   return (
@@ -38,7 +38,7 @@ export default function NumberInput({ label, value, onChange, min, max, step, un
             const n = parseFloat(e.target.value)
             if (!isNaN(n)) onChange(clamp(n, min, max))
           }}
-          className={`min-w-0 flex-1 h-11 px-2 rounded-xl border border-line bg-surface text-ink text-sm text-center tabular-nums focus:outline-none ${ring}`}
+          className={`min-w-0 flex-1 h-11 px-2 rounded-xl border border-line bg-surface text-ink text-sm text-center tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 ${ring}`}
         />
         <button
           type="button"
