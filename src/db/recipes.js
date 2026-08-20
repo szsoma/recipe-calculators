@@ -147,3 +147,9 @@ export function removeSourdough(id) {
     all.filter((r) => r.id !== id),
   )
 }
+
+export function duplicateSourdough(id) {
+  const source = getSourdough(id)
+  if (!source) return null
+  return saveSourdough({ name: `${source.name} (copy)`, note: source.note, params: source.params })
+}
