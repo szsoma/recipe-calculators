@@ -16,7 +16,7 @@ const defaultBase = {
   water: 4200,
 }
 
-const accent = 'amber'
+const accent = 'kombucha'
 
 function formatValue(value) {
   return Math.round(value * 100) / 100
@@ -173,9 +173,9 @@ export default function Kombucha() {
               />
             ))}
           </div>
-          <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
-            <span className="text-sm text-gray-500">Base Volume</span>
-            <span className="text-lg font-bold text-gray-900">{formatValue(baseVolume)} ml</span>
+          <div className="mt-4 pt-4 border-t border-line flex justify-between items-center">
+            <span className="text-sm text-ink-muted">Base Volume</span>
+            <span className="text-lg font-bold text-ink tabular-nums">{formatValue(baseVolume)} ml</span>
           </div>
         </Card>
 
@@ -198,33 +198,33 @@ export default function Kombucha() {
 
           {/* Delayed Sugar Instructions */}
           {delayedSugar && (
-            <div className="mb-4 p-4 bg-purple-50 rounded-xl border-2 border-purple-300">
-              <h4 className="text-sm font-bold text-purple-900 mb-2 flex items-center gap-2">
+            <div className="mb-4 p-4 bg-purple-50 dark:bg-purple-950/40 rounded-xl border-2 border-purple-300 dark:border-purple-800">
+              <h4 className="text-sm font-bold text-purple-900 dark:text-purple-200 mb-2 flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 Delayed Sugar Instructions
               </h4>
-              <div className="bg-white p-3 rounded-lg mb-3">
-                <p className="text-xs text-purple-900 font-semibold mb-1">Initial Batch (Day 1):</p>
-                <p className="text-xs text-purple-800">
+              <div className="bg-surface p-3 rounded-lg mb-3">
+                <p className="text-xs text-purple-900 dark:text-purple-200 font-semibold mb-1">Initial Batch (Day 1):</p>
+                <p className="text-xs text-purple-800 dark:text-purple-300 tabular-nums">
                   First portion: <strong>{formatValue(getSyrupSugar())}g sugar</strong> dissolved in the batch
                 </p>
               </div>
-              <div className="bg-white p-3 rounded-lg">
-                <p className="text-xs text-purple-900 font-semibold mb-2">Additional Syrups:</p>
-                <ol className="text-xs text-purple-800 space-y-1 ml-4 list-decimal">
+              <div className="bg-surface p-3 rounded-lg">
+                <p className="text-xs text-purple-900 dark:text-purple-200 font-semibold mb-2">Additional Syrups:</p>
+                <ol className="text-xs text-purple-800 dark:text-purple-300 space-y-1 ml-4 list-decimal tabular-nums">
                   <li><strong>Day 2:</strong> Dissolve <strong>{formatValue(getSyrupSugar())}g sugar</strong> in <strong>400ml water</strong></li>
                   <li><strong>Day 3:</strong> Dissolve <strong>{formatValue(getSyrupSugar())}g sugar</strong> in <strong>400ml water</strong></li>
                 </ol>
               </div>
-              <p className="text-xs text-purple-700 mt-3 italic">
+              <p className="text-xs text-purple-700 dark:text-purple-400 mt-3 italic tabular-nums">
                 Total sugar: {formatValue(currentRecipe.sugar)}g divided into 3 equal portions
               </p>
             </div>
           )}
 
           {/* Target Volume */}
-          <div className="mb-4 p-4 bg-green-50 rounded-xl border-2 border-green-200">
-            <label className="block text-sm font-medium text-green-900 mb-2">
+          <div className="mb-4 p-4 bg-green-50 dark:bg-green-950/40 rounded-xl border-2 border-green-200 dark:border-green-800">
+            <label className="block text-sm font-medium text-green-900 dark:text-green-300 mb-2">
               Target Batch Volume
             </label>
             <div className="flex gap-2">
@@ -233,10 +233,10 @@ export default function Kombucha() {
                 value={formatValue(totalVolume)}
                 onChange={(e) => handleVolumeChange(e.target.value)}
                 step="1"
-                className="flex-1 px-4 py-3 border-2 border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:border-green-500 focus:ring-green-200 text-lg font-semibold"
+                className="flex-1 h-11 px-4 border-2 border-green-300 dark:border-green-700 bg-surface text-ink rounded-lg focus:outline-none focus:ring-2 focus:border-green-500 focus:ring-green-200 dark:focus:ring-green-800 text-lg font-semibold tabular-nums"
                 disabled={fixedVolume}
               />
-              <span className="px-4 py-3 bg-green-600 text-white rounded-lg font-bold min-w-[60px] text-center">
+              <span className="px-4 h-11 flex items-center bg-green-600 text-white rounded-lg font-bold min-w-[60px] justify-center">
                 ml
               </span>
             </div>
@@ -291,8 +291,8 @@ export default function Kombucha() {
 
         {/* How to use */}
         <Card>
-          <h3 className="font-bold text-gray-900 mb-3 text-sm">How to use:</h3>
-          <ul className="text-gray-600 space-y-2 text-sm">
+          <h3 className="font-bold text-ink mb-3 text-sm">How to use:</h3>
+          <ul className="text-ink-muted space-y-2 text-sm">
             <li>• <strong>Edit Base Recipe:</strong> Set your preferred ingredient amounts</li>
             <li>• <strong>Set Target Volume:</strong> Enter your desired batch size in the green box</li>
             <li>• <strong>Proportional Mode:</strong> Change any ingredient - all others scale proportionally</li>

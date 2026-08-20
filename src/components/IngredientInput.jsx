@@ -1,7 +1,7 @@
 const accentBorders = {
-  amber: 'border-amber-300 focus:border-amber-500 focus:ring-amber-200',
-  orange: 'border-orange-300 focus:border-orange-500 focus:ring-orange-200',
-  red: 'border-red-300 focus:border-red-500 focus:ring-red-200',
+  kombucha: 'border-line focus:border-kombucha focus-visible:outline-kombucha',
+  slambuc: 'border-line focus:border-slambuc focus-visible:outline-slambuc',
+  pizza: 'border-line focus:border-pizza focus-visible:outline-pizza',
 }
 
 export default function IngredientInput({
@@ -10,7 +10,7 @@ export default function IngredientInput({
   onChange,
   unit,
   icon,
-  accent = 'amber',
+  accent = 'kombucha',
   badge = null,
 }) {
   const inputId = `ingredient-${label.toLowerCase().replace(/\s+/g, '-')}`
@@ -19,10 +19,10 @@ export default function IngredientInput({
     <div className="flex items-center gap-3">
       <span className="text-2xl">{icon}</span>
       <div className="flex-1">
-        <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor={inputId} className="block text-sm font-medium text-ink mb-1">
           {label}
           {badge && (
-            <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full font-bold">
+            <span className="ml-2 px-2 py-0.5 bg-sunken text-ink-muted border border-line text-xs rounded-full font-bold">
               {badge}
             </span>
           )}
@@ -34,9 +34,9 @@ export default function IngredientInput({
             value={value}
             onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
             step="0.01"
-            className={`flex-1 px-3 py-2 border-2 rounded-lg focus:outline-none focus:ring-2 text-base ${accentBorders[accent]}`}
+            className={`flex-1 h-11 px-3 border-2 rounded-lg bg-surface text-ink text-base tabular-nums focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 ${accentBorders[accent]}`}
           />
-          <span className="px-3 py-2 bg-gray-100 rounded-lg text-gray-600 font-medium min-w-[50px] text-center text-base">
+          <span className="px-3 h-11 flex items-center bg-sunken border border-line rounded-lg text-ink-muted font-medium min-w-[50px] justify-center text-base tabular-nums">
             {unit}
           </span>
         </div>

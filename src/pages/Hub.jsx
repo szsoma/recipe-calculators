@@ -1,65 +1,42 @@
 import { Link } from 'react-router-dom'
+import { ChevronRight } from 'lucide-react'
 import PageContainer from '../components/PageContainer'
 
-const calculators = [
-  {
-    name: 'Kombucha',
-    description: 'Batch scaling & delayed sugar',
-    icon: '🍵',
-    path: '/kombucha',
-    accent: 'hover:border-amber-300',
-  },
-  {
-    name: 'Slambuc',
-    description: 'Ingredient ratios',
-    icon: '🍲',
-    path: '/slambuc',
-    accent: 'hover:border-orange-300',
-  },
-  {
-    name: 'Pizza',
-    description: 'Biga Bench dough calc',
-    icon: '🍕',
-    path: '/pizza',
-    accent: 'hover:border-red-300',
-  },
+const CALCULATORS = [
+  { name: 'Kombucha', description: 'Batch scaling and delayed sugar', icon: '🍵', path: '/kombucha', dot: 'bg-kombucha' },
+  { name: 'Slambuc', description: 'Ingredient ratios by people or by weight', icon: '🍲', path: '/slambuc', dot: 'bg-slambuc' },
+  { name: 'Pizza', description: 'Biga dough, schedule, and saved recipes', icon: '🍕', path: '/pizza', dot: 'bg-pizza' },
 ]
 
 export default function Hub() {
   return (
     <PageContainer>
-      <div className="px-4 py-8 max-w-lg mx-auto">
-        <div className="text-center mb-8">
-          <span className="text-4xl">🧮</span>
-          <h1 className="text-2xl font-bold text-gray-900 mt-2">Recipe Calculators</h1>
-          <p className="text-gray-500 mt-1">Choose a calculator</p>
-        </div>
+      <div className="px-4 pt-12 pb-8 max-w-lg mx-auto">
+        <header className="mb-8">
+          <p className="text-xs font-semibold uppercase tracking-widest text-ink-muted">Recipe calculators</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-ink">Scale it right.</h1>
+          <p className="mt-2 text-ink-muted">Three kitchen calculators. Everything stays on this device.</p>
+        </header>
 
-        <div className="grid grid-cols-2 gap-4">
-          {calculators.map((calc) => (
-            <div key={calc.name}>
-              {calc.path ? (
-                <Link
-                  to={calc.path}
-                  className={`block bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center transition-all hover:shadow-md hover:scale-[1.02] ${calc.accent}`}
-                >
-                  <span className="text-4xl block mb-3">{calc.icon}</span>
-                  <h2 className="font-semibold text-gray-900">{calc.name}</h2>
-                  <p className="text-sm text-gray-500 mt-1">{calc.description}</p>
-                </Link>
-              ) : (
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center opacity-60">
-                  <span className="text-4xl block mb-3">{calc.icon}</span>
-                  <h2 className="font-semibold text-gray-900">{calc.name}</h2>
-                  <p className="text-sm text-gray-500 mt-1">{calc.description}</p>
-                  <span className="inline-block mt-2 px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded-full">
-                    Coming soon
-                  </span>
-                </div>
-              )}
-            </div>
+        <nav className="grid gap-3 sm:grid-cols-2">
+          {CALCULATORS.map((calc) => (
+            <Link
+              key={calc.name}
+              to={calc.path}
+              className="group flex items-center gap-4 rounded-2xl border border-line bg-surface p-4 min-h-11 transition-colors hover:border-ink-muted focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              <span className="text-3xl" aria-hidden="true">{calc.icon}</span>
+              <span className="flex-1 min-w-0">
+                <span className="flex items-center gap-2">
+                  <span className={`w-1.5 h-1.5 rounded-full ${calc.dot}`} aria-hidden="true" />
+                  <span className="font-semibold text-ink">{calc.name}</span>
+                </span>
+                <span className="block text-sm text-ink-muted mt-0.5">{calc.description}</span>
+              </span>
+              <ChevronRight className="w-5 h-5 text-ink-muted group-hover:text-ink" aria-hidden="true" />
+            </Link>
           ))}
-        </div>
+        </nav>
       </div>
     </PageContainer>
   )

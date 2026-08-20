@@ -1,17 +1,17 @@
 const toggleColors = {
-  amber: 'bg-amber-500',
-  orange: 'bg-orange-700',
-  red: 'bg-red-500',
+  kombucha: 'bg-kombucha',
+  slambuc: 'bg-slambuc',
+  pizza: 'bg-pizza',
 }
 
-export default function Toggle({ label, checked, onChange, accent = 'amber' }) {
+export default function Toggle({ label, checked, onChange, accent = 'kombucha' }) {
   return (
-    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-      <span className="text-sm font-medium text-gray-700">{label}</span>
+    <div className="flex items-center justify-between p-3 bg-sunken border border-line rounded-xl min-h-11">
+      <span className="text-sm font-medium text-ink">{label}</span>
       <button
         onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-          checked ? toggleColors[accent] : 'bg-gray-300'
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${
+          checked ? toggleColors[accent] : 'bg-line'
         }`}
         role="switch"
         aria-checked={checked}
