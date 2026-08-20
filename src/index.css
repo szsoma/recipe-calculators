@@ -10,6 +10,7 @@
   --accent-kombucha: #a8761a;
   --accent-slambuc: #b04d1c;
   --accent-pizza: #c4341f;
+  --accent-sourdough: #8B6914;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,6 +24,7 @@
     --accent-kombucha: #e0a63a;
     --accent-slambuc: #e07a45;
     --accent-pizza: #ef5d45;
+    --accent-sourdough: #C99B1A;
   }
 }
 
@@ -36,6 +38,7 @@
   --color-kombucha: var(--accent-kombucha);
   --color-slambuc: var(--accent-slambuc);
   --color-pizza: var(--accent-pizza);
+  --color-sourdough: var(--accent-sourdough);
 }
 
 @layer base {
