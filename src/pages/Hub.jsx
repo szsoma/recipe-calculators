@@ -6,6 +6,7 @@ const CALCULATORS = [
   { name: 'Kombucha', description: 'Batch scaling and delayed sugar', icon: '🍵', path: '/kombucha', dot: 'bg-kombucha' },
   { name: 'Slambuc', description: 'Ingredient ratios by people or by weight', icon: '🍲', path: '/slambuc', dot: 'bg-slambuc' },
   { name: 'Pizza', description: 'Biga dough, schedule, and saved recipes', icon: '🍕', path: '/pizza', dot: 'bg-pizza' },
+  { name: 'Sourdough', description: 'Bread from starter, scaled to bake', icon: '🍞', path: '/sourdough', dot: 'bg-sourdough' },
 ]
 
 export default function Hub() {
