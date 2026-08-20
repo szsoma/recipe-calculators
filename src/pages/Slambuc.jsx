@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Header from '../components/Header'
 import PageContainer from '../components/PageContainer'
 import Card from '../components/Card'
+import { loadSession } from '../db/session'
+import useSessionSync from '../hooks/useSessionSync'
 
 const accent = 'orange'
 
@@ -37,10 +39,24 @@ function formatNum(n) {
 }
 
 export default function Slambuc() {
-  const [mode, setMode] = useState('people')
-  const [people, setPeople] = useState(4)
-  const [selectedIng, setSelectedIng] = useState('teszta')
-  const [ingValue, setIngValue] = useState(400)
+  const initial = useMemo(() => {
+    const stored = loadSession('slambuc', {
+      mode: 'people',
+      people: 4,
+      selectedIng: 'teszta',
+      ingValue: 400,
+    })
+    if (!INGREDIENTS.some((ing) => ing.key === stored.selectedIng)) {
+      stored.selectedIng = 'teszta'
+    }
+    return stored
+  }, [])
+  const [mode, setMode] = useState(initial.mode)
+  const [people, setPeople] = useState(initial.people)
+  const [selectedIng, setSelectedIng] = useState(initial.selectedIng)
+  const [ingValue, setIngValue] = useState(initial.ingValue)
+
+  useSessionSync('slambuc', { mode, people, selectedIng, ingValue })
 
   const resultsFromPeople = calcFromPeople(people)
   const resultsFromIng = calcFromIngredient(selectedIng, ingValue)

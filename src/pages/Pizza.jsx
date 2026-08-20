@@ -8,10 +8,12 @@ import PizzaCalculator from './pizza/PizzaCalculator'
 import PizzaRecipes from './pizza/PizzaRecipes'
 import SaveRecipeDialog from './pizza/SaveRecipeDialog'
 import { DEFAULT_PIZZA_PARAMS } from '../lib/pizza'
-import { save as saveRecipe } from '../db/recipes'
+import { get as getRecipe, save as saveRecipe } from '../db/recipes'
 import { isPersistent } from '../db/store'
 import { PARAM_KEYS } from '../db/schema'
 import { decodeRecipe, SHARE_PARAM, ShareError } from '../lib/share'
+import { loadSession } from '../db/session'
+import useSessionSync from '../hooks/useSessionSync'
 
 const TABS = [
   { id: 'calculator', label: 'Calculator' },
@@ -20,9 +22,20 @@ const TABS = [
 
 export default function Pizza() {
   const [tab, setTab] = useState('calculator')
-  const [params, setParams] = useState(DEFAULT_PIZZA_PARAMS)
-  const [bakeDateTimeStr, setBakeDateTimeStr] = useState('')
-  const [loadedRecipe, setLoadedRecipe] = useState(null)
+  const initial = useMemo(
+    () =>
+      loadSession('pizza', {
+        params: DEFAULT_PIZZA_PARAMS,
+        bakeDateTimeStr: '',
+        loadedRecipeId: null,
+      }),
+    [],
+  )
+  const [params, setParams] = useState(initial.params)
+  const [bakeDateTimeStr, setBakeDateTimeStr] = useState(initial.bakeDateTimeStr)
+  const [loadedRecipe, setLoadedRecipe] = useState(() =>
+    initial.loadedRecipeId ? getRecipe(initial.loadedRecipeId) : null,
+  )
   const [dialog, setDialog] = useState(null) // null | 'save' | 'saveAs'
   const [saveError, setSaveError] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
@@ -53,6 +66,8 @@ export default function Pizza() {
     if (!loadedRecipe) return false
     return PARAM_KEYS.some((k) => String(params[k]) !== String(loadedRecipe.params[k]))
   }, [params, loadedRecipe])
+
+  useSessionSync('pizza', { params, bakeDateTimeStr, loadedRecipeId: loadedRecipe?.id ?? null })
 
   function openDialog(mode) {
     setSaveError('')

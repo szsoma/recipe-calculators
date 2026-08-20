@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Header from '../components/Header'
 import PageContainer from '../components/PageContainer'
 import Card from '../components/Card'
 import IngredientInput from '../components/IngredientInput'
 import Toggle from '../components/Toggle'
 import { Scale, Leaf, Clock } from 'lucide-react'
+import { loadSession } from '../db/session'
+import useSessionSync from '../hooks/useSessionSync'
 
 const defaultBase = {
   tea: 40,
@@ -21,10 +23,25 @@ function formatValue(value) {
 }
 
 export default function Kombucha() {
-  const [baseRecipe, setBaseRecipe] = useState(defaultBase)
-  const [currentRecipe, setCurrentRecipe] = useState(defaultBase)
-  const [fixedVolume, setFixedVolume] = useState(false)
-  const [delayedSugar, setDelayedSugar] = useState(false)
+  const initial = useMemo(() => {
+    const stored = loadSession('kombucha', {
+      baseRecipe: defaultBase,
+      currentRecipe: defaultBase,
+      fixedVolume: false,
+      delayedSugar: false,
+    })
+    return {
+      ...stored,
+      baseRecipe: { ...defaultBase, ...stored.baseRecipe },
+      currentRecipe: { ...defaultBase, ...stored.currentRecipe },
+    }
+  }, [])
+  const [baseRecipe, setBaseRecipe] = useState(initial.baseRecipe)
+  const [currentRecipe, setCurrentRecipe] = useState(initial.currentRecipe)
+  const [fixedVolume, setFixedVolume] = useState(initial.fixedVolume)
+  const [delayedSugar, setDelayedSugar] = useState(initial.delayedSugar)
+
+  useSessionSync('kombucha', { baseRecipe, currentRecipe, fixedVolume, delayedSugar })
 
   const handleBaseChange = (ingredient, value) => {
     const numValue = parseFloat(value) || 0
