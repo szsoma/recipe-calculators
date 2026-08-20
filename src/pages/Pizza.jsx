@@ -22,6 +22,7 @@ export default function Pizza() {
   const [bakeDateTimeStr, setBakeDateTimeStr] = useState('')
   const [loadedRecipe, setLoadedRecipe] = useState(null)
   const [dialog, setDialog] = useState(null) // null | 'save' | 'saveAs'
+  const [saveError, setSaveError] = useState('')
 
   function setParam(key, value) {
     setParams((prev) => ({ ...prev, [key]: value }))
@@ -32,20 +33,35 @@ export default function Pizza() {
     return PARAM_KEYS.some((k) => String(params[k]) !== String(loadedRecipe.params[k]))
   }, [params, loadedRecipe])
 
+  function openDialog(mode) {
+    setSaveError('')
+    setDialog(mode)
+  }
+
   function handleSaveNew({ name, note }) {
-    const record = saveRecipe({ name, note, params })
-    setLoadedRecipe(record)
-    setDialog(null)
+    try {
+      const record = saveRecipe({ name, note, params })
+      setLoadedRecipe(record)
+      setDialog(null)
+      setSaveError('')
+    } catch (err) {
+      setSaveError(err.message || 'Could not save recipe.')
+    }
   }
 
   function handleOverwrite() {
-    const record = saveRecipe({
-      id: loadedRecipe.id,
-      name: loadedRecipe.name,
-      note: loadedRecipe.note,
-      params,
-    })
-    setLoadedRecipe(record)
+    try {
+      const record = saveRecipe({
+        id: loadedRecipe.id,
+        name: loadedRecipe.name,
+        note: loadedRecipe.note,
+        params,
+      })
+      setLoadedRecipe(record)
+      setSaveError('')
+    } catch (err) {
+      setSaveError(err.message || 'Could not save recipe.')
+    }
   }
 
   const saveFooter = (
@@ -55,9 +71,12 @@ export default function Pizza() {
           This browser is blocking storage — recipes will be lost when you close the app.
         </p>
       )}
+      {dialog === null && saveError && (
+        <p className="text-xs text-red-600 text-center">{saveError}</p>
+      )}
       {loadedRecipe ? (
         <div className="flex gap-2">
-          <Button variant="secondary" fullWidth onClick={() => setDialog('saveAs')}>
+          <Button variant="secondary" fullWidth onClick={() => openDialog('saveAs')}>
             Save as new
           </Button>
           <Button variant="primary" accent="pizza" fullWidth disabled={!isDirty} onClick={handleOverwrite}>
@@ -65,7 +84,7 @@ export default function Pizza() {
           </Button>
         </div>
       ) : (
-        <Button variant="primary" accent="pizza" fullWidth onClick={() => setDialog('save')}>
+        <Button variant="primary" accent="pizza" fullWidth onClick={() => openDialog('save')}>
           Save recipe
         </Button>
       )}
@@ -102,6 +121,7 @@ export default function Pizza() {
         initialNote={dialog === 'saveAs' && loadedRecipe ? loadedRecipe.note : ''}
         onSubmit={handleSaveNew}
         onClose={() => setDialog(null)}
+        submitError={saveError}
       />
     </PageContainer>
   )

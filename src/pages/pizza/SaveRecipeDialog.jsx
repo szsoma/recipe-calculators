@@ -3,7 +3,7 @@ import Dialog from '../../components/Dialog'
 import Button from '../../components/Button'
 import Field from '../../components/Field'
 
-export default function SaveRecipeDialog({ open, title = 'Save recipe', initialName = '', initialNote = '', onSubmit, onClose }) {
+export default function SaveRecipeDialog({ open, title = 'Save recipe', initialName = '', initialNote = '', onSubmit, onClose, submitError = '' }) {
   const [name, setName] = useState(initialName)
   const [note, setNote] = useState(initialNote)
   const [error, setError] = useState('')
@@ -37,7 +37,7 @@ export default function SaveRecipeDialog({ open, title = 'Save recipe', initialN
             className="w-full h-11 px-3 rounded-xl border border-line bg-surface text-ink focus:outline-none focus:border-pizza"
           />
         </Field>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {(error || submitError) && <p className="text-sm text-red-600">{error || submitError}</p>}
         <Field label="Note" htmlFor="recipe-note" hint="Flour, oven, how it turned out — anything you want to remember.">
           <textarea
             id="recipe-note"
