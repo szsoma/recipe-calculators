@@ -56,5 +56,6 @@ export function decodeRecipe(payload) {
 }
 
 export function buildShareUrl(recipe, origin) {
-  return `${origin}/pizza?${SHARE_PARAM}=${encodeRecipe(recipe)}`
+  const base = origin.replace(/\/+$/, '')
+  return `${base}/pizza?${SHARE_PARAM}=${encodeRecipe(recipe)}`
 }

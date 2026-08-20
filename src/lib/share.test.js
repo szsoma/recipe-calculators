@@ -26,6 +26,12 @@ describe('share codec', () => {
     expect(url.startsWith('https://example.com/pizza?r=')).toBe(true)
   })
 
+  it('normalizes origin with trailing slash', () => {
+    const urlWithoutTrail = buildShareUrl(recipe, 'https://example.com')
+    const urlWithTrail = buildShareUrl(recipe, 'https://example.com/')
+    expect(urlWithoutTrail).toBe(urlWithTrail)
+  })
+
   it('throws ShareError on junk input', () => {
     expect(() => decodeRecipe('!!!!')).toThrow(ShareError)
     expect(() => decodeRecipe('')).toThrow(ShareError)
