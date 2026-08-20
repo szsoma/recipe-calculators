@@ -1,4 +1,5 @@
 import { beforeEach } from 'vitest'
+import { clearMemory } from './src/db/store'
 
 function createFakeStorage() {
   const map = new Map()
@@ -22,4 +23,5 @@ function createFakeStorage() {
 
 beforeEach(() => {
   globalThis.localStorage = createFakeStorage()
+  clearMemory()
 })

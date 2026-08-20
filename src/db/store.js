@@ -3,6 +3,10 @@ export const NAMESPACE = 'rc.v1.'
 const memory = new Map()
 let persistent = true
 
+export function clearMemory() {
+  memory.clear()
+}
+
 function backend() {
   try {
     const s = globalThis.localStorage
