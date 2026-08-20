@@ -10,7 +10,7 @@ import SaveRecipeDialog from './pizza/SaveRecipeDialog'
 import { DEFAULT_PIZZA_PARAMS } from '../lib/pizza'
 import { get as getRecipe, save as saveRecipe } from '../db/recipes'
 import { isPersistent } from '../db/store'
-import { PARAM_KEYS } from '../db/schema'
+import { PARAM_KEYS, normalizeParams } from '../db/schema'
 import { decodeRecipe, SHARE_PARAM, ShareError } from '../lib/share'
 import { loadSession } from '../db/session'
 import useSessionSync from '../hooks/useSessionSync'
@@ -22,15 +22,18 @@ const TABS = [
 
 export default function Pizza() {
   const [tab, setTab] = useState('calculator')
-  const initial = useMemo(
-    () =>
-      loadSession('pizza', {
-        params: DEFAULT_PIZZA_PARAMS,
-        bakeDateTimeStr: '',
-        loadedRecipeId: null,
-      }),
-    [],
-  )
+  const initial = useMemo(() => {
+    const stored = loadSession('pizza', {
+      params: DEFAULT_PIZZA_PARAMS,
+      bakeDateTimeStr: '',
+      loadedRecipeId: null,
+    })
+    return {
+      params: normalizeParams(stored.params),
+      bakeDateTimeStr: typeof stored.bakeDateTimeStr === 'string' ? stored.bakeDateTimeStr : '',
+      loadedRecipeId: typeof stored.loadedRecipeId === 'string' ? stored.loadedRecipeId : null,
+    }
+  }, [])
   const [params, setParams] = useState(initial.params)
   const [bakeDateTimeStr, setBakeDateTimeStr] = useState(initial.bakeDateTimeStr)
   const [loadedRecipe, setLoadedRecipe] = useState(() =>
@@ -95,14 +98,27 @@ export default function Pizza() {
     setTab('calculator')
   }
 
+  function handleRecipesChanged() {
+    if (!loadedRecipe) return
+    setLoadedRecipe(getRecipe(loadedRecipe.id))
+  }
+
   function handleOverwrite() {
     setPendingShare(null)
     setShareError('')
+    const current = getRecipe(loadedRecipe.id)
+    if (!current) {
+      // The record was deleted elsewhere (Recipes tab, another tab) — never silently
+      // resurrect it under a fresh id; ask the user to save it as a new recipe.
+      setLoadedRecipe(null)
+      openDialog('save')
+      return
+    }
     try {
       const record = saveRecipe({
-        id: loadedRecipe.id,
-        name: loadedRecipe.name,
-        note: loadedRecipe.note,
+        id: current.id,
+        name: current.name,
+        note: current.note,
         params,
       })
       setLoadedRecipe(record)
@@ -179,7 +195,7 @@ export default function Pizza() {
           footer={saveFooter}
         />
       ) : (
-        <PizzaRecipes onLoad={handleLoad} />
+        <PizzaRecipes onLoad={handleLoad} onRecipesChanged={handleRecipesChanged} />
       )}
 
       <SaveRecipeDialog

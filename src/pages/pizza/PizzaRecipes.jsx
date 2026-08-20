@@ -7,7 +7,7 @@ import recipeSummary from './recipeSummary'
 import { list, remove, duplicate, save, importRecipe, skippedCount } from '../../db/recipes'
 import { buildShareUrl, decodeRecipe, ShareError } from '../../lib/share'
 
-export default function PizzaRecipes({ onLoad }) {
+export default function PizzaRecipes({ onLoad, onRecipesChanged }) {
   const [recipes, setRecipes] = useState(() => list())
   const [editing, setEditing] = useState(null)
   const [importing, setImporting] = useState(false)
@@ -19,6 +19,8 @@ export default function PizzaRecipes({ onLoad }) {
 
   function refresh() {
     setRecipes(list())
+    // Let the shell re-sync (or clear) the recipe it currently has loaded.
+    onRecipesChanged?.()
   }
 
   function flash(text) {
