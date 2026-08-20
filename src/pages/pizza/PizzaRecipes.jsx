@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Copy, Share2, Pencil, Trash2, Download } from 'lucide-react'
 import Card from '../../components/Card'
 import Button from '../../components/Button'
@@ -14,6 +14,8 @@ export default function PizzaRecipes({ onLoad }) {
   const [importText, setImportText] = useState('')
   const [message, setMessage] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState(null)
+  const [editError, setEditError] = useState('')
+  const flashTimer = useRef(null)
 
   function refresh() {
     setRecipes(list())
@@ -21,8 +23,15 @@ export default function PizzaRecipes({ onLoad }) {
 
   function flash(text) {
     setMessage(text)
-    setTimeout(() => setMessage(''), 2500)
+    if (flashTimer.current) clearTimeout(flashTimer.current)
+    flashTimer.current = setTimeout(() => setMessage(''), 2500)
   }
+
+  useEffect(() => {
+    return () => {
+      if (flashTimer.current) clearTimeout(flashTimer.current)
+    }
+  }, [])
 
   async function handleShare(recipe) {
     const url = buildShareUrl(recipe, window.location.origin)
@@ -144,14 +153,26 @@ export default function PizzaRecipes({ onLoad }) {
           </div>
 
           <div className="flex flex-wrap gap-1 mt-4 pt-3 border-t border-line">
-            <Button variant="ghost" size="sm" onClick={() => setEditing(recipe)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setEditError('')
+                setEditing(recipe)
+              }}
+            >
               <Pencil className="w-4 h-4" /> Edit
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => {
-                duplicate(recipe.id)
+                const copy = duplicate(recipe.id)
+                if (!copy) {
+                  flash('Could not duplicate — recipe no longer exists')
+                  refresh()
+                  return
+                }
                 refresh()
               }}
             >
@@ -190,11 +211,20 @@ export default function PizzaRecipes({ onLoad }) {
         initialName={editing?.name ?? ''}
         initialNote={editing?.note ?? ''}
         onSubmit={({ name, note }) => {
-          save({ id: editing.id, name, note, params: editing.params })
-          setEditing(null)
-          refresh()
+          try {
+            save({ id: editing.id, name, note, params: editing.params })
+            setEditing(null)
+            setEditError('')
+            refresh()
+          } catch (err) {
+            setEditError(err.message || 'Could not save recipe.')
+          }
         }}
-        onClose={() => setEditing(null)}
+        onClose={() => {
+          setEditing(null)
+          setEditError('')
+        }}
+        submitError={editError}
       />
     </div>
   )

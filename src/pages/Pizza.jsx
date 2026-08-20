@@ -60,6 +60,8 @@ export default function Pizza() {
   }
 
   function handleSaveNew({ name, note }) {
+    setPendingShare(null)
+    setShareError('')
     try {
       const record = saveRecipe({ name, note, params })
       setLoadedRecipe(record)
@@ -71,12 +73,16 @@ export default function Pizza() {
   }
 
   function handleLoad(recipe) {
+    setPendingShare(null)
+    setShareError('')
     setParams(recipe.params)
     setLoadedRecipe(recipe)
     setTab('calculator')
   }
 
   function handleOverwrite() {
+    setPendingShare(null)
+    setShareError('')
     try {
       const record = saveRecipe({
         id: loadedRecipe.id,
