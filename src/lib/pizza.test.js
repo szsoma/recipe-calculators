@@ -4,7 +4,12 @@ import {
   resolveParams,
   computeDough,
   equivalentHours,
+  relativeRate,
   fermentationLevel,
+  suggestedFreshYeast,
+  yeastDoseLevel,
+  YEAST_MAX_PCT,
+  YEAST_MIN_PCT,
   computeSchedule,
   buildRecipeText,
   clamp,
@@ -30,9 +35,9 @@ describe('resolveParams', () => {
     expect(r).toEqual({ salt: 2.7, bigaHyd: 42, bigaYeast: 1 })
   })
 
-  it('uses the instant yeast default when fresh yeast is off', () => {
+  it('keeps the fresh-yeast basis when the instant toggle is on', () => {
     const r = resolveParams({ ...DEFAULT_PIZZA_PARAMS, useFreshYeast: false })
-    expect(r.bigaYeast).toBe(0.3)
+    expect(r.bigaYeast).toBe(1)
   })
 
   it('prefers fine overrides over defaults', () => {
@@ -64,6 +69,18 @@ describe('computeDough', () => {
     expect(round(d.total)).toBe(round(d.target))
   })
 
+  it('reports the total maturation across both stages', () => {
+    const d = computeDough(DEFAULT_PIZZA_PARAMS)
+    expect(d.totalEq).toBeCloseTo(d.bigaEq + d.finalEq, 10)
+  })
+
+  it('quotes the yeast suggestion on the same basis as the displayed dose', () => {
+    const fresh = computeDough(DEFAULT_PIZZA_PARAMS)
+    const instant = computeDough({ ...DEFAULT_PIZZA_PARAMS, useFreshYeast: false })
+    expect(fresh.suggestedYeastPct).toBeCloseTo(fresh.suggestedYeast.pct, 10)
+    expect(instant.suggestedYeastPct).toBeCloseTo(instant.suggestedYeast.pct / 3, 10)
+  })
+
   it('divides the displayed yeast by three for instant yeast', () => {
     const params = { ...DEFAULT_PIZZA_PARAMS, useFreshYeast: false, bigaYeastFine: '1' }
     const d = computeDough(params)
@@ -78,15 +95,70 @@ describe('computeDough', () => {
   })
 })
 
-describe('equivalentHours', () => {
+describe('relativeRate and equivalentHours', () => {
   it('is the identity at the 18C reference', () => {
-    expect(equivalentHours(12, 18)).toBe(12)
+    expect(relativeRate(18)).toBeCloseTo(1, 10)
+    expect(equivalentHours(12, 18)).toBeCloseTo(12, 10)
   })
 
-  it('doubles the rate per 10C', () => {
-    expect(equivalentHours(10, 28)).toBeCloseTo(20, 10)
-    expect(equivalentHours(10, 20)).toBeCloseTo(11.48698355, 6)
-    expect(equivalentHours(24, 4)).toBeCloseTo(9.0942994, 6)
+  it('multiplies the rate by 2.5 per 10C at the reference', () => {
+    expect(relativeRate(28) / relativeRate(18)).toBeCloseTo(2.5, 4)
+  })
+
+  it('is steeper in the cold and shallower when warm', () => {
+    const q10 = (t) => relativeRate(t + 10) / relativeRate(t)
+    expect(q10(4)).toBeGreaterThan(q10(18))
+    expect(q10(18)).toBeGreaterThan(q10(28))
+    expect(q10(4)).toBeCloseTo(2.744, 2)
+    expect(q10(28)).toBeCloseTo(2.357, 2)
+  })
+
+  it('slows the fridge down far more than a flat Q10 of 2 would', () => {
+    // Flat Q10=2 put 24h at 4C at 9.1 equivalent hours, which overstated it.
+    expect(equivalentHours(24, 4)).toBeCloseTo(5.954, 2)
+  })
+})
+
+describe('suggestedFreshYeast', () => {
+  it('reproduces the Giorilli anchor: 1% fresh for 18h at 18C', () => {
+    const s = suggestedFreshYeast(equivalentHours(18, 18))
+    expect(s.pct).toBeCloseTo(1, 6)
+    expect(s.belowFloor).toBe(false)
+    expect(s.aboveCeiling).toBe(false)
+  })
+
+  it('is inversely proportional to the fermentation equivalent', () => {
+    expect(suggestedFreshYeast(36).pct).toBeCloseTo(suggestedFreshYeast(18).pct / 2, 10)
+  })
+
+  it('calls for less yeast as the biga gets warmer at a fixed time', () => {
+    const at = (temp) => suggestedFreshYeast(equivalentHours(18, temp)).pct
+    expect(at(22)).toBeLessThan(at(18))
+    expect(at(25)).toBeLessThan(at(22))
+    // Matches the common summer guidance of dropping to roughly 0.7% fresh.
+    expect(at(22)).toBeCloseTo(0.69, 2)
+  })
+
+  it('clamps and flags doses that fall outside a weighable range', () => {
+    const hot = suggestedFreshYeast(1000)
+    expect(hot.pct).toBe(YEAST_MIN_PCT)
+    expect(hot.belowFloor).toBe(true)
+
+    const cold = suggestedFreshYeast(2)
+    expect(cold.pct).toBe(YEAST_MAX_PCT)
+    expect(cold.aboveCeiling).toBe(true)
+  })
+
+  it('returns null for a non-positive equivalent', () => {
+    expect(suggestedFreshYeast(0)).toBeNull()
+  })
+})
+
+describe('yeastDoseLevel', () => {
+  it('bands the actual dose against the suggestion', () => {
+    expect(yeastDoseLevel(1, 1)).toBe('ok')
+    expect(yeastDoseLevel(1.6, 1)).toBe('high')
+    expect(yeastDoseLevel(0.5, 1)).toBe('low')
   })
 })
 

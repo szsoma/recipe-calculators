@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Card from '../../components/Card'
 import NumberInput from '../../components/NumberInput'
+import InfoPopover from '../../components/InfoPopover'
 import { Copy, Clock, Check } from 'lucide-react'
 import {
   round,
@@ -9,8 +10,15 @@ import {
   buildRecipeText,
   fermentationLevel,
   FERMENTATION_TEXT,
+  YEAST_DOSE_TEXT,
   formatDateTime,
 } from '../../lib/pizza'
+
+const YEAST_DOSE_COLOR = {
+  high: 'text-red-600 dark:text-red-400',
+  ok: 'text-green-700 dark:text-green-400',
+  low: 'text-amber-600 dark:text-amber-400',
+}
 
 const FERMENTATION_COLOR = {
   'very-short': 'text-red-600 dark:text-red-400',
@@ -32,6 +40,10 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
 
   const bigaLevel = fermentationLevel(bigaEq)
   const finalLevel = fermentationLevel(finalEq)
+  const totalLevel = fermentationLevel(d.totalEq)
+  const { suggestedYeast, suggestedYeastPct, yeastDose } = d
+  const yeastUnit = useFreshYeast ? 'fresh' : 'instant'
+  const suggestionMatches = suggestedYeast && round(bigaYeast) === round(suggestedYeast.pct)
 
   function handleCopy() {
     const text = buildRecipeText({ ...params, bakeDateTimeStr })
@@ -83,11 +95,56 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
           <NumberInput label="Time" value={bigaTime} onChange={(v) => setParam('bigaTime', v)} min={4} max={48} step={1} unit="h" />
           <div className="bg-sunken rounded-xl p-3 border border-line">
             <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-ink-muted">Fermentation equivalent</span>
+              <span className="text-sm text-ink-muted flex items-center gap-1">
+                Fermentation equivalent
+                <InfoPopover label="Fermentation equivalent" align="left">
+                  How much fermentation this stage actually delivers, restated as hours at 18°C so
+                  you can compare a cold slow biga against a warm fast one. Yeast activity follows
+                  an Arrhenius curve: around 18°C the rate multiplies by roughly 2.5 for every
+                  +10°C, and because the curve works on absolute temperature that factor is steeper
+                  in the cold (~2.7 near 4°C) and shallower when warm (~2.35 at 28°C).
+                </InfoPopover>
+              </span>
               <span className="text-ink font-bold">{round(bigaEq)}h @ 18°C</span>
             </div>
             <p className={`text-xs font-medium ${FERMENTATION_COLOR[bigaLevel]}`}>{FERMENTATION_TEXT[bigaLevel]}</p>
           </div>
+
+          {suggestedYeast && (
+            <div className="bg-sunken rounded-xl p-3 border border-line">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm text-ink-muted flex items-center gap-1">
+                  Suggested yeast
+                  <InfoPopover label="Suggested yeast" align="left">
+                    A biga is ripe once its yeast has produced a set amount of gas and acid, so
+                    yeast × rate × time stays constant — and rate × time is the fermentation
+                    equivalent above. Raise the temperature and the same dose does that work sooner,
+                    so the dose has to come down or the biga peaks early and collapses. The curve is
+                    pinned to Giorilli's coded biga: 1% fresh yeast, 18 h at 18°C.
+                  </InfoPopover>
+                </span>
+                <span className="text-ink font-bold tabular-nums">
+                  {round(suggestedYeastPct)}% {yeastUnit}
+                </span>
+              </div>
+              <p className={`text-xs font-medium ${YEAST_DOSE_COLOR[yeastDose]}`}>
+                {suggestedYeast.aboveCeiling
+                  ? 'Capped at 2% — this is too cold or too short for the biga to ripen fully. Give it longer or warmer.'
+                  : suggestedYeast.belowFloor
+                    ? 'Floored at 0.05% — too little to weigh reliably. Shorten the biga or cool it down.'
+                    : YEAST_DOSE_TEXT[yeastDose]}
+              </p>
+              {!suggestionMatches && (
+                <button
+                  type="button"
+                  onClick={() => setParam('bigaYeastFine', String(round(suggestedYeast.pct)))}
+                  className="mt-2 w-full min-h-11 rounded-lg border border-line bg-surface text-sm font-medium text-ink hover:bg-line active:scale-[0.99] transition"
+                >
+                  Use {round(suggestedYeastPct)}% (now {round(d.yeastPct)}%)
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </Card>
 
@@ -97,7 +154,7 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
           <span className="text-lg">🫓</span> Final Dough <span className="text-xs text-ink-muted font-normal">day 2</span>
         </h2>
         <div className="space-y-4">
-          <NumberInput label="Hydration" value={finalHyd} onChange={(v) => setParam('finalHyd', v)} min={55} max={85} step={1} unit="%" />
+          <NumberInput label="Hydration" value={finalHyd} onChange={(v) => setParam('finalHyd', v)} min={55} max={100} step={1} unit="%" />
           <NumberInput label="Temperature" value={finalTemp} onChange={(v) => setParam('finalTemp', v)} min={4} max={30} step={1} unit="°C" />
           <NumberInput label="Time" value={finalTime} onChange={(v) => setParam('finalTime', v)} min={1} max={72} step={1} unit="h" />
           <div className="bg-sunken rounded-xl p-3 border border-line">
@@ -106,6 +163,22 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
               <span className="text-ink font-bold">{round(finalEq)}h @ 18°C</span>
             </div>
             <p className={`text-xs font-medium ${FERMENTATION_COLOR[finalLevel]}`}>{FERMENTATION_TEXT[finalLevel]}</p>
+          </div>
+
+          <div className="bg-sunken rounded-xl p-3 border border-line">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm text-ink-muted flex items-center gap-1">
+                Total maturation
+                <InfoPopover label="Total maturation" align="left">
+                  Biga plus final dough. The yeast you dosed into the biga keeps working after the
+                  final mix, so over-fermentation is a total-budget problem, not a per-stage one.
+                  The suggested yeast above only balances the biga stage — if this total runs long,
+                  shorten the final stage or drop its temperature rather than cutting yeast further.
+                </InfoPopover>
+              </span>
+              <span className="text-ink font-bold">{round(d.totalEq)}h @ 18°C</span>
+            </div>
+            <p className={`text-xs font-medium ${FERMENTATION_COLOR[totalLevel]}`}>{FERMENTATION_TEXT[totalLevel]}</p>
           </div>
         </div>
       </Card>
@@ -117,6 +190,15 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
         </h2>
 
         {/* Yeast toggle */}
+        <div className="flex items-center justify-end gap-1 mb-1 text-xs text-ink-muted">
+          Yeast type
+          <InfoPopover label="Fresh vs instant yeast">
+            Instant dry yeast is about three times as concentrated as fresh (compressed) yeast, so
+            the same fermentation needs a third of the weight. Every yeast figure in this app is
+            held on a fresh basis and divided by 3 only for display — switching the toggle changes
+            what you weigh out, never how fast the dough ferments.
+          </InfoPopover>
+        </div>
         <div className="flex gap-1 bg-sunken p-1 rounded-lg mb-4">
           <button
             onClick={() => setParam('useFreshYeast', true)}
@@ -221,9 +303,14 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
       <Card>
         <h2 className="font-semibold text-ink mb-4 flex items-center gap-2">
           <span className="text-lg">⚙️</span> Variables
+          <InfoPopover label="Biga yeast">
+            Set on a fresh-yeast basis, as a percentage of the biga's flour. This is the one dial
+            that has to move when you change the biga temperature or time — see Suggested yeast in
+            the Biga card for the amount that matches your current schedule.
+          </InfoPopover>
         </h2>
         <div className="space-y-4">
-          <NumberInput label="Biga yeast" value={bigaYeast} onChange={(v) => setParam('bigaYeastFine', String(v))} min={0.1} max={5} step={0.05} unit="%" />
+          <NumberInput label="Biga yeast" value={bigaYeast} onChange={(v) => setParam('bigaYeastFine', String(v))} min={0.05} max={5} step={0.05} unit="%" />
           <NumberInput label="Salt" value={salt} onChange={(v) => setParam('saltFine', String(v))} min={0.5} max={5} step={0.1} unit="%" />
         </div>
       </Card>
@@ -300,8 +387,8 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
 
       {/* Footer */}
       <p className="text-center text-xs text-ink-muted italic pb-4 font-mono">
-        Fermentation rate roughly doubles per 10°C, so each stage is shown as equivalent hours at 18°C.<br />
-        Below ~10°C it flatters the real activity. A planning aid, not a verdict — watch the dough.
+        Rate follows an Arrhenius curve (×2.5 per 10°C at 18°C, steeper cold, shallower warm), so each stage is shown as equivalent hours at 18°C.<br />
+        Above ~30°C yeast nears its optimum and stops speeding up as modelled. A planning aid, not a verdict — watch the dough.
       </p>
     </div>
   )

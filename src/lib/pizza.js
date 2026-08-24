@@ -1,7 +1,8 @@
 export const SALT_DEFAULT = 2.7
 export const BIGA_HYD_DEFAULT = 42
-export const BIGA_YEAST_DEFAULT_FRESH = 1
-export const BIGA_YEAST_DEFAULT_INSTANT = 0.3
+// bigaYeast is always carried on a fresh-yeast basis; the instant conversion
+// (÷3) is applied only where an amount is displayed.
+export const BIGA_YEAST_DEFAULT = 1
 export const FINAL_HYD_DEFAULT = 65
 export const BIGA_PCT_DEFAULT = 30
 
@@ -32,16 +33,66 @@ export function resolveParams(params) {
   const salt = params.saltFine !== '' ? parseFloat(params.saltFine) : SALT_DEFAULT
   const bigaHyd = params.bigaHydFine !== '' ? parseFloat(params.bigaHydFine) : BIGA_HYD_DEFAULT
   const bigaYeast =
-    params.bigaYeastFine !== ''
-      ? parseFloat(params.bigaYeastFine)
-      : params.useFreshYeast
-        ? BIGA_YEAST_DEFAULT_FRESH
-        : BIGA_YEAST_DEFAULT_INSTANT
+    params.bigaYeastFine !== '' ? parseFloat(params.bigaYeastFine) : BIGA_YEAST_DEFAULT
   return { salt, bigaHyd, bigaYeast }
 }
 
+// ── Fermentation rate model ──────────────────────────────────────────────────
+// Rate follows an Arrhenius law in absolute temperature rather than a fixed Q10.
+// ARRHENIUS_B (= Ea/R) is fitted so the rate multiplies by 2.5 per 10 °C at the
+// 18 °C reference. Because Arrhenius works on 1/T, the effective Q10 falls out
+// steeper in the cold (~2.7 near 4 °C) and shallower when warm (~2.35 at 28 °C),
+// which is how real dough behaves — a flat Q10 of 2 badly understates how much
+// the fridge slows things down.
+export const REF_TEMP_C = 18
+export const ARRHENIUS_B = 8034 // Ea/R in kelvin (Ea ≈ 66.8 kJ/mol)
+
+export function relativeRate(temp) {
+  return Math.exp(ARRHENIUS_B * (1 / (REF_TEMP_C + 273.15) - 1 / (temp + 273.15)))
+}
+
 export function equivalentHours(hours, temp) {
-  return hours * Math.pow(2, (temp - 18) / 10)
+  return hours * relativeRate(temp)
+}
+
+// ── Yeast dose model ─────────────────────────────────────────────────────────
+// A biga is ripe once its yeast has produced a fixed amount of gas and acid, so
+// (yeast × rate × time) is what stays constant. Rate × time is exactly the
+// fermentation equivalent, which makes the required dose inversely proportional
+// to it: warmer or longer means proportionally less yeast, or the biga blows
+// past its peak and collapses.
+//
+// One anchor pins the whole curve: Giorilli's coded biga, 1% fresh yeast for
+// 18 h at 18 °C. That also reproduces the common summer advice of dropping to
+// ~0.7% fresh once the room sits in the low twenties.
+export const YEAST_ANCHOR_PCT = 1
+export const YEAST_ANCHOR_EQ_HOURS = 18
+export const YEAST_MIN_PCT = 0.05
+export const YEAST_MAX_PCT = 2
+
+export function suggestedFreshYeast(eqHours) {
+  if (!(eqHours > 0)) return null
+  const raw = (YEAST_ANCHOR_PCT * YEAST_ANCHOR_EQ_HOURS) / eqHours
+  return {
+    raw,
+    pct: clamp(raw, YEAST_MIN_PCT, YEAST_MAX_PCT),
+    belowFloor: raw < YEAST_MIN_PCT,
+    aboveCeiling: raw > YEAST_MAX_PCT,
+  }
+}
+
+export function yeastDoseLevel(actualPct, suggestedPct) {
+  if (!(suggestedPct > 0)) return 'ok'
+  const ratio = actualPct / suggestedPct
+  if (ratio > 1.5) return 'high'
+  if (ratio < 0.67) return 'low'
+  return 'ok'
+}
+
+export const YEAST_DOSE_TEXT = {
+  high: 'More yeast than this temperature and time need — the biga may peak early and collapse.',
+  ok: 'In step with the biga temperature and time.',
+  low: 'Less yeast than this temperature and time need — the biga may still be under-ripe.',
 }
 
 export const FERMENTATION_TEXT = {
@@ -78,6 +129,12 @@ export function computeDough(params) {
   const Wf = (F * params.finalHyd) / 100 - Wb
   const Sf = (F * salt) / 100
 
+  const bigaEq = equivalentHours(params.bigaTime, params.bigaTemp)
+  const finalEq = equivalentHours(params.finalTime, params.finalTemp)
+  // bigaYeast is always held on a fresh-yeast basis; the instant conversion is
+  // applied only where the amount is shown.
+  const suggestion = suggestedFreshYeast(bigaEq)
+
   return {
     salt,
     bigaHyd,
@@ -94,8 +151,17 @@ export function computeDough(params) {
     bigaTotal: Fb + Wb + Yb,
     yeastPct: params.useFreshYeast ? bigaYeast : bigaYeast / 3,
     yeastG: params.useFreshYeast ? Yb : Yb / 3,
-    bigaEq: equivalentHours(params.bigaTime, params.bigaTemp),
-    finalEq: equivalentHours(params.finalTime, params.finalTemp),
+    bigaEq,
+    finalEq,
+    totalEq: bigaEq + finalEq,
+    suggestedYeast: suggestion,
+    // Suggestions are quoted on the same basis as the table above them.
+    suggestedYeastPct: suggestion
+      ? params.useFreshYeast
+        ? suggestion.pct
+        : suggestion.pct / 3
+      : null,
+    yeastDose: suggestion ? yeastDoseLevel(bigaYeast, suggestion.pct) : 'ok',
   }
 }
 

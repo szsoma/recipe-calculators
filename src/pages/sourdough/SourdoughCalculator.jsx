@@ -86,7 +86,7 @@ export default function SourDoughCalculator({ params, setParam, loadedRecipe, is
           <span className="text-lg">🫓</span> Dough
         </h2>
         <div className="space-y-4">
-          <NumberInput label="Hydration" value={params.hydration} onChange={(v) => setParam('hydration', v)} min={55} max={80} step={1} unit="%" />
+          <NumberInput label="Hydration" value={params.hydration} onChange={(v) => setParam('hydration', v)} min={55} max={100} step={1} unit="%" />
           <NumberInput label="Salt" value={params.salt} onChange={(v) => setParam('salt', v)} min={1.5} max={3} step={0.1} unit="%" />
           <NumberInput label="Second flour" value={params.secondFlourPct} onChange={(v) => setParam('secondFlourPct', v)} min={0} max={100} step={5} unit="%" />
         </div>
