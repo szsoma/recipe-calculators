@@ -58,9 +58,11 @@ Steps (write tests first, same file):
    `roomTemp: 23`, `poolishMainYeastFine: ''`.
 3. Add `prefermentDefaults(type)` returning the full patch per the spec's Defaults table
    (Poolish set + Biga set). The Biga patch mirrors existing defaults.
-4. `resolveParams`: add `poolishMainYeast` (fine else
-   `POOLISH_MAIN_YEAST_DEFAULT`), and make `bigaYeast` fall back to
-   `POOLISH_YEAST_DEFAULT` when `prefermentType==='poolish'` and no fine override.
+4. `resolveParams`: return `poolishMainYeast` (fine else
+   `POOLISH_MAIN_YEAST_DEFAULT`) **only in the `prefermentType==='poolish'` branch**, and
+   make `bigaYeast` fall back to `POOLISH_YEAST_DEFAULT` when poolish and no fine override.
+   The biga/default branch must keep returning exactly `{ salt, bigaHyd, bigaYeast }` so
+   the existing `toEqual` assertions at `pizza.test.js:36` and `:50` stay green.
 5. `computeDough`: branch on `params.prefermentType === 'poolish'`.
    - Poolish: `target`, `p = bigaPct/100`,
      `yeastFraction = (poolishYeast/100)*p + (poolishMainYeast/100)*(1-p)`,
@@ -103,10 +105,13 @@ Steps:
 3. In `normalizeParams`, normalize `prefermentType` explicitly:
    `src.prefermentType === 'poolish' ? 'poolish' : 'biga'`.
 
-Verify: new tests in `recipes.test.js` (or schema tests): normalize fills
-`prefermentType` to `'biga'` and room defaults when absent; accepts `'poolish'`; bad
-string -> `'biga'`; `poolishMainYeastFine` behaves like other fine keys ('' | finite
-string). Existing normalization tests pass.
+Verify: `migrations.test.js` update — `PARAM_KEYS` grows from 12 → 16, so change
+`toHaveLength(12)` to `toHaveLength(16)` and rename the "twelve param keys" test label
+(`migrations.test.js:55-58`). New tests in `recipes.test.js` (no `schema.test.js` exists;
+comment the schema tests in `recipes.test.js`): normalize fills `prefermentType` to
+`'biga'` and room defaults when absent; accepts `'poolish'`; bad string -> `'biga'`;
+`poolishMainYeastFine` behaves like other fine keys ('' | finite string). Existing
+normalization tests pass. `Object.keys().sort()` assertions are order-agnostic and fine.
 
 ### Task 3 — Calculator UI in `src/pages/pizza/PizzaCalculator.jsx`
 
