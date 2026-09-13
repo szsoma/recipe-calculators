@@ -1,9 +1,9 @@
 import { useState, useCallback } from "react";
 
 // Arányok: 1 főre
-const PER_PERSON = { teszta: 100, krumpli: 215, szalonna: 50 };
-// szalonna arány: 500g/1000g tészta = 0.5 | krumpli: 2000g/1000g tészta = 2
-// de per person: 100g tészta → 50g szalonna, 215g krumpli
+const PER_PERSON = { teszta: 100, krumpli: 215, szalonna: 41 };
+// szalonna arány: 410g/1000g tészta = 0.41 | krumpli: 2000g/1000g tészta = 2
+// de per person: 100g tészta → 41g szalonna, 215g krumpli
 
 const INGREDIENTS = [
   { key: "teszta",   label: "Tészta",   color: "#C4874A", unit: "g", emoji: "🍝" },
@@ -323,7 +323,7 @@ export default function SlambucKalkulator() {
           fontStyle: "italic",
           lineHeight: 1.6,
         }}>
-          Alap arány: 100g tészta · 215g krumpli · 50g szalonna / fő
+          Alap arány: 100g tészta · 215g krumpli · 41g szalonna / fő
         </p>
       </div>
     </div>

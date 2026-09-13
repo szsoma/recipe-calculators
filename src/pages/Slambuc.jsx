@@ -7,7 +7,7 @@ import useSessionSync from '../hooks/useSessionSync'
 
 const accent = 'slambuc'
 
-const PER_PERSON = { teszta: 100, krumpli: 215, szalonna: 50 }
+const PER_PERSON = { teszta: 100, krumpli: 215, szalonna: 41 }
 
 const INGREDIENTS = [
   { key: 'teszta', label: 'Pasta', color: '#C4874A', unit: 'g', emoji: '🍝' },
@@ -219,7 +219,7 @@ export default function Slambuc() {
         </div>
 
         <p className="text-center text-xs text-ink-muted italic">
-          Base ratio: 100g pasta · 215g potato · 50g bacon / person
+          Base ratio: 100g pasta · 215g potato · 41g bacon / person
         </p>
       </div>
     </PageContainer>
