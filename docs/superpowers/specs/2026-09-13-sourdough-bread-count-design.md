@@ -46,7 +46,7 @@ The Sourdough, Dough, and Recipe cards are unchanged; their numbers are batch to
 🍞 Sourdough Bread Recipe
 ─────────────────────────
 Target: 2 × 800g baked = 1600g (1882g dough)
-Flour total: 1067g
+Flour total: 1127g
 ...
 ```
 
