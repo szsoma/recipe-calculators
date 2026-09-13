@@ -4,6 +4,7 @@ import { DEFAULT_SOURDOUGH_PARAMS } from '../lib/sourdough'
 export const SCHEMA_VERSION = 1
 
 export const PARAM_KEYS = [
+  'prefermentType',
   'balls',
   'ballW',
   'bigaPct',
@@ -12,9 +13,12 @@ export const PARAM_KEYS = [
   'finalHyd',
   'finalTemp',
   'finalTime',
+  'roomTime',
+  'roomTemp',
   'useFreshYeast',
   'bigaHydFine',
   'bigaYeastFine',
+  'poolishMainYeastFine',
   'saltFine',
 ]
 
@@ -27,13 +31,17 @@ const NUMERIC_KEYS = [
   'finalHyd',
   'finalTemp',
   'finalTime',
+  'roomTime',
+  'roomTemp',
 ]
 
-const FINE_KEYS = ['bigaHydFine', 'bigaYeastFine', 'saltFine']
+const FINE_KEYS = ['bigaHydFine', 'bigaYeastFine', 'poolishMainYeastFine', 'saltFine']
 
 export function normalizeParams(raw) {
   const src = raw && typeof raw === 'object' ? raw : {}
-  const out = {}
+  const out = {
+    prefermentType: src.prefermentType === 'poolish' ? 'poolish' : 'biga',
+  }
   for (const key of NUMERIC_KEYS) {
     const n = Number(src[key])
     out[key] = Number.isFinite(n) ? n : DEFAULT_PIZZA_PARAMS[key]

@@ -52,10 +52,10 @@ describe('migrateRecipe', () => {
     expect(r.params.balls).toBe(3)
   })
 
-  it('normalises every one of the twelve param keys', () => {
+  it('normalises every one of the sixteen param keys', () => {
     const r = migrateRecipe({ ...valid, params: {} })
     expect(Object.keys(r.params).sort()).toEqual([...PARAM_KEYS].sort())
-    expect(PARAM_KEYS).toHaveLength(12)
+    expect(PARAM_KEYS).toHaveLength(16)
     for (const key of PARAM_KEYS) {
       expect(r.params[key]).toBe(DEFAULT_PIZZA_PARAMS[key] ?? '')
     }

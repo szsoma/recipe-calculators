@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { list, get, save, remove, duplicate, importRecipe, skippedCount, STORAGE_KEY, saveSourdough } from './recipes'
 import { read, write } from './store'
-import { SCHEMA_VERSION } from './schema'
+import { SCHEMA_VERSION, normalizeParams } from './schema'
 
 const params = { balls: 6, ballW: 280, finalHyd: 70 }
 
@@ -182,6 +182,40 @@ describe('recipes', () => {
     it('preserves an explicit bread count', () => {
       const saved = saveSourdough({ name: 'Two loaves', params: { bakedWeight: 800, breads: 2 } })
       expect(saved.params.breads).toBe(2)
+    })
+  })
+
+  describe('pizza schema param normalization', () => {
+    it('fills prefermentType to biga and room defaults when absent', () => {
+      const out = normalizeParams({ balls: 4, ballW: 260 })
+      expect(out.prefermentType).toBe('biga')
+      expect(out.roomTime).toBe(1)
+      expect(out.roomTemp).toBe(23)
+    })
+
+    it('accepts prefermentType poolish and preserves it', () => {
+      expect(normalizeParams({ prefermentType: 'poolish' }).prefermentType).toBe('poolish')
+    })
+
+    it('coerces any other or bad string for prefermentType to biga', () => {
+      expect(normalizeParams({ prefermentType: 'sourdough' }).prefermentType).toBe('biga')
+      expect(normalizeParams({ prefermentType: '' }).prefermentType).toBe('biga')
+      expect(normalizeParams({ prefermentType: 'BIGA' }).prefermentType).toBe('biga')
+    })
+
+    it('treats poolishMainYeastFine like the other fine keys', () => {
+      expect(normalizeParams({ poolishMainYeastFine: undefined }).poolishMainYeastFine).toBe('')
+      expect(normalizeParams({ poolishMainYeastFine: null }).poolishMainYeastFine).toBe('')
+      expect(normalizeParams({ poolishMainYeastFine: '' }).poolishMainYeastFine).toBe('')
+      expect(normalizeParams({ poolishMainYeastFine: 0.5 }).poolishMainYeastFine).toBe('0.5')
+      expect(normalizeParams({ poolishMainYeastFine: '0.4' }).poolishMainYeastFine).toBe('0.4')
+      expect(normalizeParams({ poolishMainYeastFine: 'lots' }).poolishMainYeastFine).toBe('')
+    })
+
+    it('normalizes roomTime and roomTemp as numbers', () => {
+      const out = normalizeParams({ roomTime: '1', roomTemp: '23' })
+      expect(out.roomTime).toBe(1)
+      expect(out.roomTemp).toBe(23)
     })
   })
 })
