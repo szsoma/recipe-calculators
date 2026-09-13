@@ -2,6 +2,7 @@ export const BAKING_LOSS = 0.15
 export const MOTHER_TBSP_PER_100G = 1
 
 export const DEFAULT_SOURDOUGH_PARAMS = {
+  breads: 1,
   bakedWeight: 800,
   hydration: 65,
   salt: 2,
@@ -14,9 +15,10 @@ export function round(v) {
 }
 
 export function computeSourdough(params) {
-  const { bakedWeight, hydration, salt, sourdoughPct, secondFlourPct } = params
+  const { bakedWeight, breads = 1, hydration, salt, sourdoughPct, secondFlourPct } = params
 
-  const doughWeight = bakedWeight / (1 - BAKING_LOSS)
+  const totalBaked = bakedWeight * breads
+  const doughWeight = totalBaked / (1 - BAKING_LOSS)
   const totalFlour = doughWeight / (1 + hydration / 100 + salt / 100)
 
   const sourdoughFlour = (totalFlour * sourdoughPct) / 100
@@ -29,7 +31,9 @@ export function computeSourdough(params) {
   const saltG = (totalFlour * salt) / 100
 
   return {
+    totalBaked,
     doughWeight,
+    perLoafDough: doughWeight / breads,
     totalFlour,
     sourdoughFlour,
     sourdoughWater,
@@ -70,11 +74,12 @@ export function formatDateTime(date) {
 
 export function buildRecipeText(params) {
   const d = computeSourdough(params)
+  const breads = params.breads ?? 1
 
   const lines = []
   lines.push(`🍞 Sourdough Bread Recipe`)
   lines.push(`─────────────────────────`)
-  lines.push(`Target: ${params.bakedWeight}g baked (${round(d.doughWeight)}g dough)`)
+  lines.push(`Target: ${breads} × ${params.bakedWeight}g baked = ${round(d.totalBaked)}g (${round(d.doughWeight)}g dough)`)
   lines.push(`Flour total: ${round(d.totalFlour)}g`)
   lines.push(``)
   lines.push(`── Sourdough (${params.sourdoughPct}%) ──`)
