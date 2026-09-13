@@ -43,7 +43,8 @@ export default function Sourdough() {
 
   const isDirty = useMemo(() => {
     if (!loadedRecipe) return false
-    return SOURDOUGH_PARAM_KEYS.some((k) => String(params[k]) !== String(loadedRecipe.params[k]))
+    const saved = normalizeSourdoughParams(loadedRecipe.params)
+    return SOURDOUGH_PARAM_KEYS.some((k) => String(params[k]) !== String(saved[k]))
   }, [params, loadedRecipe])
 
   useSessionSync('sourdough', { params, loadedRecipeId: loadedRecipe?.id ?? null })
