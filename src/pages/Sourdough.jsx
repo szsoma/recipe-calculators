@@ -60,7 +60,7 @@ export default function Sourdough() {
   }
 
   function handleLoad(recipe) {
-    setParams(recipe.params)
+    setParams(normalizeSourdoughParams(recipe.params))
     setLoadedRecipe(recipe)
     setTab('calculator')
   }

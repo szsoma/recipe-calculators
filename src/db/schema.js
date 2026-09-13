@@ -54,6 +54,7 @@ export function normalizeParams(raw) {
 }
 
 export const SOURDOUGH_PARAM_KEYS = [
+  'breads',
   'bakedWeight',
   'hydration',
   'salt',
@@ -62,6 +63,7 @@ export const SOURDOUGH_PARAM_KEYS = [
 ]
 
 const SOURDOUGH_NUMERIC_KEYS = [
+  'breads',
   'bakedWeight',
   'hydration',
   'salt',

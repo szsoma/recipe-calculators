@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { list, get, save, remove, duplicate, importRecipe, skippedCount, STORAGE_KEY } from './recipes'
+import { list, get, save, remove, duplicate, importRecipe, skippedCount, STORAGE_KEY, saveSourdough } from './recipes'
 import { read, write } from './store'
 import { SCHEMA_VERSION } from './schema'
 
@@ -170,6 +170,18 @@ describe('recipes', () => {
       const raw = rawEntries()
       expect(raw).toContainEqual(future)
       expect(raw).toContainEqual(corrupt)
+    })
+  })
+
+  describe('sourdough param normalization', () => {
+    it('defaults breads to 1 for legacy recipes saved without it', () => {
+      const saved = saveSourdough({ name: 'Legacy', params: { bakedWeight: 800, hydration: 65 } })
+      expect(saved.params.breads).toBe(1)
+    })
+
+    it('preserves an explicit bread count', () => {
+      const saved = saveSourdough({ name: 'Two loaves', params: { bakedWeight: 800, breads: 2 } })
+      expect(saved.params.breads).toBe(2)
     })
   })
 })
