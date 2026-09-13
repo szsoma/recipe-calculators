@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   DEFAULT_PIZZA_PARAMS,
+  prefermentDefaults,
   resolveParams,
   computeDough,
   equivalentHours,
@@ -15,6 +16,26 @@ import {
   clamp,
   round,
 } from './pizza'
+
+const POOLISH_PARAMS = {
+  ...DEFAULT_PIZZA_PARAMS,
+  prefermentType: 'poolish',
+  balls: 4,
+  ballW: 270,
+  bigaPct: 40,
+  bigaTemp: 23,
+  bigaTime: 16,
+  finalHyd: 68,
+  finalTemp: 6,
+  finalTime: 24,
+  roomTemp: 23,
+  roomTime: 1,
+  saltFine: '2.5',
+  bigaYeastFine: '0.1',
+  bigaHydFine: '',
+  poolishMainYeastFine: '0.5',
+  useFreshYeast: true,
+}
 
 describe('clamp and round', () => {
   it('clamps to the range', () => {
@@ -210,5 +231,160 @@ describe('buildRecipeText', () => {
   it('uses the displayed instant yeast amount', () => {
     const text = buildRecipeText({ ...DEFAULT_PIZZA_PARAMS, useFreshYeast: false, bigaYeastFine: '1' })
     expect(text).toContain('Yeast (Instant): 0.6g')
+  })
+})
+
+describe('prefermentDefaults', () => {
+  it('returns the full poolish patch from the spec', () => {
+    expect(prefermentDefaults('poolish')).toEqual({
+      balls: 4,
+      ballW: 270,
+      bigaPct: 40,
+      bigaTemp: 23,
+      bigaTime: 16,
+      bigaYeastFine: '0.1',
+      bigaHydFine: '',
+      finalHyd: 68,
+      finalTemp: 6,
+      finalTime: 24,
+      roomTemp: 23,
+      roomTime: 1,
+      poolishMainYeastFine: '0.5',
+      saltFine: '2.5',
+      useFreshYeast: true,
+    })
+  })
+
+  it('returns the full biga patch from the spec', () => {
+    expect(prefermentDefaults('biga')).toEqual({
+      balls: 4,
+      ballW: 260,
+      bigaPct: 30,
+      bigaTemp: 18,
+      bigaTime: 12,
+      bigaYeastFine: '',
+      bigaHydFine: '',
+      finalHyd: 65,
+      finalTemp: 20,
+      finalTime: 10,
+      roomTemp: 23,
+      roomTime: 1,
+      poolishMainYeastFine: '0.5',
+      saltFine: '',
+      useFreshYeast: true,
+    })
+  })
+})
+
+describe('resolveParams poolish', () => {
+  it('uses poolish defaults when no fine overrides are set', () => {
+    const r = resolveParams({
+      ...POOLISH_PARAMS,
+      saltFine: '',
+      bigaYeastFine: '',
+      poolishMainYeastFine: '',
+    })
+    expect(r).toEqual({ salt: 2.7, bigaHyd: 42, bigaYeast: 0.1, poolishMainYeast: 0.5 })
+  })
+
+  it('prefers fine overrides in poolish mode', () => {
+    const r = resolveParams({ ...POOLISH_PARAMS, poolishMainYeastFine: '0.7' })
+    expect(r).toEqual({ salt: 2.5, bigaHyd: 42, bigaYeast: 0.1, poolishMainYeast: 0.7 })
+  })
+})
+
+describe('computeDough poolish', () => {
+  it('matches the verified poolish default batch', () => {
+    const d = computeDough(POOLISH_PARAMS)
+    expect(round(d.target)).toBe(1101.6)
+    expect(round(d.F)).toBe(644.8)
+    expect(round(d.Fb)).toBe(257.9)
+    expect(round(d.Wb)).toBe(257.9)
+    expect(round(d.Yb)).toBe(0.3)
+    expect(round(d.Ff)).toBe(386.9)
+    expect(round(d.Wf)).toBe(180.5)
+    expect(round(d.Sf)).toBe(16.1)
+    expect(round(d.mainYeastG)).toBe(1.9)
+    expect(round(d.total)).toBe(1101.6)
+    expect(round(d.bigaEq)).toBe(25.5)
+    expect(round(d.roomEq)).toBe(1.6)
+    expect(round(d.coldEq)).toBe(7.3)
+    expect(round(d.finalEq)).toBe(8.9)
+    expect(round(d.totalEq)).toBe(34.4)
+  })
+
+  it('sums the components back to the target dough weight', () => {
+    const d = computeDough(POOLISH_PARAMS)
+    expect(round(d.total)).toBe(round(d.target))
+  })
+
+  it('divides only the displayed poolish yeast by three for instant, keeping main yeast fresh', () => {
+    const fresh = computeDough(POOLISH_PARAMS)
+    const instant = computeDough({ ...POOLISH_PARAMS, useFreshYeast: false })
+    expect(instant.mainYeastG).toBeCloseTo(fresh.mainYeastG, 10)
+    expect(instant.yeastPct).toBeCloseTo(fresh.bigaYeast / 3, 10)
+    expect(instant.yeastG).toBeCloseTo(fresh.Yb / 3, 10)
+  })
+
+  it('shows the divided yeast in both recipe tables for instant yeast', () => {
+    const text = buildRecipeText({
+      ...POOLISH_PARAMS,
+      useFreshYeast: false,
+      bakeDateTimeStr: '2026-09-14T18:00',
+    })
+    expect(text).toContain('Yeast (Instant): 0.1g')
+    expect(text).toContain('Yeast (Instant): 0.6g')
+  })
+
+  it('reports no suggested yeast and an ok dose in poolish mode', () => {
+    const d = computeDough(POOLISH_PARAMS)
+    expect(d.suggestedYeast).toBeNull()
+    expect(d.yeastDose).toBe('ok')
+  })
+
+  it('computes without NaN for poolish params missing room time and temp', () => {
+    const legacy = { ...POOLISH_PARAMS }
+    delete legacy.roomTime
+    delete legacy.roomTemp
+    const d = computeDough(legacy)
+    expect(Number.isFinite(d.roomEq)).toBe(true)
+    expect(Number.isFinite(d.coldEq)).toBe(true)
+    expect(Number.isFinite(d.totalEq)).toBe(true)
+    expect(Number.isNaN(d.total)).toBe(false)
+  })
+
+  it('computes without NaN for a biga-shaped legacy object missing the new keys', () => {
+    const legacy = { ...DEFAULT_PIZZA_PARAMS }
+    delete legacy.prefermentType
+    delete legacy.roomTime
+    delete legacy.roomTemp
+    const d = computeDough(legacy)
+    expect(Number.isNaN(d.total)).toBe(false)
+    expect(Number.isNaN(d.roomEq)).toBe(false)
+    expect(Number.isNaN(d.coldEq)).toBe(false)
+  })
+})
+
+describe('computeSchedule poolish', () => {
+  it('adds the room rest to the final mix offset and walks the poolish back by biga time', () => {
+    const s = computeSchedule(POOLISH_PARAMS, '2026-09-14T18:00')
+    const hours = (a, b) => (b.getTime() - a.getTime()) / 3600000
+    expect(hours(s.finalMixTime, s.bakeTime)).toBe(25)
+    expect(hours(s.poolishMixTime, s.finalMixTime)).toBe(16)
+    expect(hours(s.poolishMixTime, s.bakeTime)).toBe(41)
+  })
+})
+
+describe('buildRecipeText poolish', () => {
+  it('includes the poolish and final dough tables and the schedule lines', () => {
+    const text = buildRecipeText({ ...POOLISH_PARAMS, bakeDateTimeStr: '2026-09-14T18:00' })
+    expect(text).toContain('🍕 Poolish Pizza Recipe')
+    expect(text).toContain('── Poolish (40%) ──')
+    expect(text).toContain('── Final Dough ──')
+    expect(text).toContain('Mature poolish: 516.1g')
+    expect(text).toContain('Flour: 386.9g')
+    expect(text).toContain('Mix poolish:')
+    expect(text).toContain('Final mix:')
+    expect(text).toContain('Bake:')
   })
 })
