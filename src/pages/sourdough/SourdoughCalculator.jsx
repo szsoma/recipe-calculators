@@ -56,9 +56,17 @@ export default function SourDoughCalculator({ params, setParam, loadedRecipe, is
         </h2>
         <div className="space-y-4">
           <NumberInput label="Baked bread weight" value={params.bakedWeight} onChange={(v) => setParam('bakedWeight', v)} min={200} max={2000} step={50} unit="g" />
-          <div className="bg-sunken rounded-xl p-3 flex justify-between items-center border border-line">
-            <span className="text-sm text-ink-muted">Target dough weight</span>
-            <span className="text-ink font-bold">{round(d.doughWeight)}g</span>
+          <NumberInput label="Number of breads" value={params.breads} onChange={(v) => setParam('breads', v)} min={1} max={12} step={1} />
+          <div className="bg-sunken rounded-xl p-3 border border-line">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-ink-muted">Target dough weight</span>
+              <span className="text-ink font-bold">{round(d.doughWeight)}g</span>
+            </div>
+            {params.breads > 1 && (
+              <p className="text-xs text-ink-muted mt-0.5 text-right">
+                {round(d.perLoafDough)}g per bread
+              </p>
+            )}
           </div>
         </div>
       </Card>
