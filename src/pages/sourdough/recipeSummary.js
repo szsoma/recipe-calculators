@@ -1,5 +1,4 @@
-import { round } from '../../lib/sourdough'
-
 export default function recipeSummary(params) {
-  return `${params.bakedWeight}g baked · ${params.hydration}% hydration · ${params.sourdoughPct}% sourdough`
+  const breads = params.breads ?? 1
+  return `${breads} × ${params.bakedWeight}g baked · ${params.hydration}% hydration · ${params.sourdoughPct}% sourdough`
 }
