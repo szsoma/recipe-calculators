@@ -102,7 +102,8 @@ export default function Pizza() {
 
   function handleRecipesChanged() {
     if (!loadedRecipe) return
-    setLoadedRecipe(getRecipe(loadedRecipe.id))
+    const recipe = getRecipe(loadedRecipe.id)
+    setLoadedRecipe(recipe ? { ...recipe, params: normalizeParams(recipe.params) } : null)
   }
 
   function handleOverwrite() {
