@@ -140,7 +140,7 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
           <NumberInput label="Temperature" value={bigaTemp} onChange={(v) => setParam('bigaTemp', v)} min={4} max={30} step={1} unit="°C" />
           <NumberInput label="Time" value={bigaTime} onChange={(v) => setParam('bigaTime', v)} min={4} max={48} step={1} unit="h" />
           {isPoolish && (
-            <NumberInput label="Poolish yeast" value={bigaYeast} onChange={(v) => setParam('bigaYeastFine', String(v))} min={0.05} max={5} step={0.05} unit="%" />
+            <NumberInput label="Poolish yeast" fieldId="num-poolish-yeast-preferment" value={bigaYeast} onChange={(v) => setParam('bigaYeastFine', String(v))} min={0.05} max={5} step={0.05} unit="%" />
           )}
           <div className="bg-sunken rounded-xl p-3 border border-line">
             <div className="flex justify-between items-center mb-1">
@@ -445,9 +445,9 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
           <div className="space-y-3">
             <div className="grid grid-cols-[88px_1fr] gap-3 items-start py-2.5 border-b border-dashed border-line">
               <div className="font-mono text-sm font-semibold text-ink">
-                {formatDateTime(schedule.bigaMixTime).split(' ')[0]}
+                {formatDateTime(isPoolish ? schedule.poolishMixTime : schedule.bigaMixTime).split(' ')[0]}
                 <div className="text-[10px] text-ink-muted uppercase tracking-wider font-normal">
-                  {schedule.bigaMixTime.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+                  {(isPoolish ? schedule.poolishMixTime : schedule.bigaMixTime).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
                 </div>
               </div>
               <div>

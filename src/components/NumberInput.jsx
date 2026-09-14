@@ -1,7 +1,7 @@
 import { clamp } from '../lib/pizza'
 
-export default function NumberInput({ label, value, onChange, min, max, step, unit, accent = 'pizza' }) {
-  const id = `num-${label.toLowerCase().replace(/\s+/g, '-')}`
+export default function NumberInput({ label, value, onChange, min, max, step, unit, accent = 'pizza', fieldId }) {
+  const id = fieldId ?? `num-${label.toLowerCase().replace(/\s+/g, '-')}`
   const ring = {
     pizza: 'focus:border-pizza focus-visible:outline-pizza',
     kombucha: 'focus:border-kombucha focus-visible:outline-kombucha',
