@@ -36,9 +36,11 @@ export default function Pizza() {
   }, [])
   const [params, setParams] = useState(initial.params)
   const [bakeDateTimeStr, setBakeDateTimeStr] = useState(initial.bakeDateTimeStr)
-  const [loadedRecipe, setLoadedRecipe] = useState(() =>
-    initial.loadedRecipeId ? getRecipe(initial.loadedRecipeId) : null,
-  )
+  const [loadedRecipe, setLoadedRecipe] = useState(() => {
+    if (!initial.loadedRecipeId) return null
+    const recipe = getRecipe(initial.loadedRecipeId)
+    return recipe ? { ...recipe, params: normalizeParams(recipe.params) } : null
+  })
   const [dialog, setDialog] = useState(null) // null | 'save' | 'saveAs'
   const [saveError, setSaveError] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
@@ -93,8 +95,8 @@ export default function Pizza() {
   function handleLoad(recipe) {
     setPendingShare(null)
     setShareError('')
-    setParams(recipe.params)
-    setLoadedRecipe(recipe)
+    setParams(normalizeParams(recipe.params))
+    setLoadedRecipe({ ...recipe, params: normalizeParams(recipe.params) })
     setTab('calculator')
   }
 
@@ -157,7 +159,7 @@ export default function Pizza() {
 
   return (
     <PageContainer>
-      <Header icon="🍕" title="Pizza — Biga Bench" accent="pizza" />
+      <Header icon="🍕" title="Pizza — Dough Bench" accent="pizza" />
       <div className="sticky top-14 z-40 bg-canvas">
         <div className="max-w-lg mx-auto px-4">
           <Tabs items={TABS} value={tab} onChange={setTab} accent="pizza" />
