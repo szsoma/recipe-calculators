@@ -12,6 +12,7 @@ import {
   FERMENTATION_TEXT,
   YEAST_DOSE_TEXT,
   formatDateTime,
+  prefermentDefaults,
 } from '../../lib/pizza'
 
 const YEAST_DOSE_COLOR = {
@@ -32,18 +33,33 @@ const FERMENTATION_COLOR = {
 export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, setBakeDateTimeStr, loadedRecipe, isDirty, footer }) {
   const [copied, setCopied] = useState(false)
 
-  const { balls, ballW, bigaPct, bigaTemp, bigaTime, finalHyd, finalTemp, finalTime, useFreshYeast } = params
+  const { balls, ballW, bigaPct, bigaTemp, bigaTime, finalHyd, finalTemp, finalTime, roomTime, roomTemp, prefermentType, useFreshYeast } = params
 
   const d = computeDough(params)
   const { salt, bigaHyd, bigaYeast, F, Fb, Wb, Yb, Ff, Wf, Sf, bigaEq, finalEq, target } = d
   const schedule = computeSchedule(params, bakeDateTimeStr)
 
+  const isPoolish = prefermentType === 'poolish'
+  // mainYeastPct/mainYeastG are held on a fresh basis in the model; the instant
+  // conversion (÷3) is applied only where an amount is displayed.
+  const mainYeastPct = useFreshYeast ? d.mainYeastPct : d.mainYeastPct / 3
+  const mainYeastG = useFreshYeast ? d.mainYeastG : d.mainYeastG / 3
+
   const bigaLevel = fermentationLevel(bigaEq)
   const finalLevel = fermentationLevel(finalEq)
+  const roomLevel = fermentationLevel(d.roomEq)
+  const coldLevel = fermentationLevel(d.coldEq)
   const totalLevel = fermentationLevel(d.totalEq)
   const { suggestedYeast, suggestedYeastPct, yeastDose } = d
   const yeastUnit = useFreshYeast ? 'fresh' : 'instant'
   const suggestionMatches = suggestedYeast && round(bigaYeast) === round(suggestedYeast.pct)
+
+  function handlePrefermentType(next) {
+    setParam('prefermentType', next)
+    for (const [key, value] of Object.entries(prefermentDefaults(next))) {
+      setParam(key, value)
+    }
+  }
 
   function handleCopy() {
     const text = buildRecipeText({ ...params, bakeDateTimeStr })
@@ -68,6 +84,34 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
         </div>
       )}
 
+      {/* Pre-ferment toggle */}
+      <div className="flex items-center justify-end gap-1 mb-2 text-xs text-ink-muted">
+        Pre-ferment
+        <InfoPopover label="Pre-ferment">
+          Choose how the dough gets its initial boost. A biga is a stiff (~42% water) dough that
+          ferments for many hours; a poolish is an equal-parts flour-and-water (100% hydration)
+          preferment that raises faster. Each mode loads its own set of defaults.
+        </InfoPopover>
+      </div>
+      <div className="flex gap-1 bg-sunken p-1 rounded-lg mb-4">
+        <button
+          onClick={() => handlePrefermentType('biga')}
+          className={`flex-1 min-h-11 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+            !isPoolish ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted'
+          }`}
+        >
+          Biga
+        </button>
+        <button
+          onClick={() => handlePrefermentType('poolish')}
+          className={`flex-1 min-h-11 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+            isPoolish ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted'
+          }`}
+        >
+          Poolish
+        </button>
+      </div>
+
       {/* Batch */}
       <Card>
         <h2 className="font-semibold text-ink mb-4 flex items-center gap-2">
@@ -83,16 +127,21 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
         </div>
       </Card>
 
-      {/* Biga */}
+      {/* Pre-ferment */}
       <Card>
         <h2 className="font-semibold text-ink mb-4 flex items-center gap-2">
-          <span className="text-lg">🫗</span> Biga <span className="text-xs text-ink-muted font-normal">day 1 · no salt</span>
+          <span className="text-lg">🫗</span> {isPoolish ? 'Poolish' : 'Biga'} <span className="text-xs text-ink-muted font-normal">day 1 · no salt</span>
         </h2>
         <div className="space-y-4">
           <NumberInput label="Share of total flour" value={bigaPct} onChange={(v) => setParam('bigaPct', v)} min={10} max={100} step={5} unit="%" />
-          <NumberInput label="Biga hydration" value={bigaHyd} onChange={(v) => setParam('bigaHydFine', String(v))} min={30} max={80} step={1} unit="%" />
+          {!isPoolish && (
+            <NumberInput label="Biga hydration" value={bigaHyd} onChange={(v) => setParam('bigaHydFine', String(v))} min={30} max={80} step={1} unit="%" />
+          )}
           <NumberInput label="Temperature" value={bigaTemp} onChange={(v) => setParam('bigaTemp', v)} min={4} max={30} step={1} unit="°C" />
           <NumberInput label="Time" value={bigaTime} onChange={(v) => setParam('bigaTime', v)} min={4} max={48} step={1} unit="h" />
+          {isPoolish && (
+            <NumberInput label="Poolish yeast" value={bigaYeast} onChange={(v) => setParam('bigaYeastFine', String(v))} min={0.05} max={5} step={0.05} unit="%" />
+          )}
           <div className="bg-sunken rounded-xl p-3 border border-line">
             <div className="flex justify-between items-center mb-1">
               <span className="text-sm text-ink-muted flex items-center gap-1">
@@ -110,7 +159,7 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
             <p className={`text-xs font-medium ${FERMENTATION_COLOR[bigaLevel]}`}>{FERMENTATION_TEXT[bigaLevel]}</p>
           </div>
 
-          {suggestedYeast && (
+          {!isPoolish && suggestedYeast && (
             <div className="bg-sunken rounded-xl p-3 border border-line">
               <div className="flex justify-between items-center mb-1">
                 <span className="text-sm text-ink-muted flex items-center gap-1">
@@ -155,25 +204,58 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
         </h2>
         <div className="space-y-4">
           <NumberInput label="Hydration" value={finalHyd} onChange={(v) => setParam('finalHyd', v)} min={55} max={100} step={1} unit="%" />
-          <NumberInput label="Temperature" value={finalTemp} onChange={(v) => setParam('finalTemp', v)} min={4} max={30} step={1} unit="°C" />
-          <NumberInput label="Time" value={finalTime} onChange={(v) => setParam('finalTime', v)} min={1} max={72} step={1} unit="h" />
-          <div className="bg-sunken rounded-xl p-3 border border-line">
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-ink-muted">Fermentation equivalent</span>
-              <span className="text-ink font-bold">{round(finalEq)}h @ 18°C</span>
-            </div>
-            <p className={`text-xs font-medium ${FERMENTATION_COLOR[finalLevel]}`}>{FERMENTATION_TEXT[finalLevel]}</p>
-          </div>
+          {!isPoolish && (
+            <>
+              <NumberInput label="Temperature" value={finalTemp} onChange={(v) => setParam('finalTemp', v)} min={4} max={30} step={1} unit="°C" />
+              <NumberInput label="Time" value={finalTime} onChange={(v) => setParam('finalTime', v)} min={1} max={72} step={1} unit="h" />
+              <div className="bg-sunken rounded-xl p-3 border border-line">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm text-ink-muted">Fermentation equivalent</span>
+                  <span className="text-ink font-bold">{round(finalEq)}h @ 18°C</span>
+                </div>
+                <p className={`text-xs font-medium ${FERMENTATION_COLOR[finalLevel]}`}>{FERMENTATION_TEXT[finalLevel]}</p>
+              </div>
+            </>
+          )}
+          {isPoolish && (
+            <>
+              <div className="bg-sunken rounded-xl p-3 border border-line">
+                <div className="mb-3">
+                  <div className="text-sm font-medium text-ink">Room rest</div>
+                  <div className="text-xs text-ink-muted">bulk proof before shaping</div>
+                </div>
+                <NumberInput label="Room rest time" value={roomTime} onChange={(v) => setParam('roomTime', v)} min={0} max={48} step={1} unit="h" />
+                <NumberInput label="Room rest temperature" value={roomTemp} onChange={(v) => setParam('roomTemp', v)} min={0} max={35} step={1} unit="°C" />
+                <div className="flex justify-between items-center mt-3">
+                  <span className="text-sm text-ink-muted">Fermentation equivalent</span>
+                  <span className="text-ink font-bold">{round(d.roomEq)}h @ 18°C</span>
+                </div>
+                <p className={`text-xs font-medium mt-1 ${FERMENTATION_COLOR[roomLevel]}`}>{FERMENTATION_TEXT[roomLevel]}</p>
+              </div>
+              <div className="bg-sunken rounded-xl p-3 border border-line">
+                <div className="mb-3">
+                  <div className="text-sm font-medium text-ink">Cold proof</div>
+                  <div className="text-xs text-ink-muted">final proof in the fridge</div>
+                </div>
+                <NumberInput label="Cold proof time" value={finalTime} onChange={(v) => setParam('finalTime', v)} min={1} max={96} step={1} unit="h" />
+                <NumberInput label="Cold proof temperature" value={finalTemp} onChange={(v) => setParam('finalTemp', v)} min={-4} max={30} step={1} unit="°C" />
+                <div className="flex justify-between items-center mt-3">
+                  <span className="text-sm text-ink-muted">Fermentation equivalent</span>
+                  <span className="text-ink font-bold">{round(d.coldEq)}h @ 18°C</span>
+                </div>
+                <p className={`text-xs font-medium mt-1 ${FERMENTATION_COLOR[coldLevel]}`}>{FERMENTATION_TEXT[coldLevel]}</p>
+              </div>
+            </>
+          )}
 
           <div className="bg-sunken rounded-xl p-3 border border-line">
             <div className="flex justify-between items-center mb-1">
               <span className="text-sm text-ink-muted flex items-center gap-1">
                 Total maturation
                 <InfoPopover label="Total maturation" align="left">
-                  Biga plus final dough. The yeast you dosed into the biga keeps working after the
-                  final mix, so over-fermentation is a total-budget problem, not a per-stage one.
-                  The suggested yeast above only balances the biga stage — if this total runs long,
-                  shorten the final stage or drop its temperature rather than cutting yeast further.
+                  {isPoolish
+                    ? 'Poolish plus room rest and cold proof. The yeast you dosed into the poolish keeps working after the final mix, so over-fermentation is a total-budget problem, not a per-stage one.'
+                    : 'Biga plus final dough. The yeast you dosed into the biga keeps working after the final mix, so over-fermentation is a total-budget problem, not a per-stage one. The suggested yeast above only balances the biga stage — if this total runs long, shorten the final stage or drop its temperature rather than cutting yeast further.'}
                 </InfoPopover>
               </span>
               <span className="text-ink font-bold">{round(d.totalEq)}h @ 18°C</span>
@@ -223,7 +305,7 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line">
-                <th className="text-left py-2 text-ink-muted font-normal text-xs uppercase tracking-wider" colSpan={2}>Biga</th>
+                <th className="text-left py-2 text-ink-muted font-normal text-xs uppercase tracking-wider" colSpan={2}>{isPoolish ? 'Poolish' : 'Biga'}</th>
                 <th className="text-right py-2 text-ink-muted font-normal text-xs uppercase tracking-wider">g</th>
               </tr>
             </thead>
@@ -235,7 +317,7 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
               </tr>
               <tr className="border-b border-dashed border-line">
                 <td className="py-2 text-ink">Water</td>
-                <td className="py-2 text-ink-muted text-xs">{bigaHyd}%</td>
+                <td className="py-2 text-ink-muted text-xs">{isPoolish ? '100%' : `${bigaHyd}%`}</td>
                 <td className="py-2 text-ink text-right font-semibold tabular-nums">{round(Wb)}</td>
               </tr>
               <tr className="border-b border-dashed border-line">
@@ -244,7 +326,7 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
                 <td className="py-2 text-ink text-right font-semibold tabular-nums">{round(d.yeastG)}</td>
               </tr>
               <tr>
-                <td className="py-2 text-ink font-semibold" colSpan={2}>Biga total</td>
+                <td className="py-2 text-ink font-semibold" colSpan={2}>{isPoolish ? 'Poolish total' : 'Biga total'}</td>
                 <td className="py-2 text-ink text-right font-bold tabular-nums">{round(Fb + Wb + Yb)}</td>
               </tr>
             </tbody>
@@ -262,7 +344,7 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
             </thead>
             <tbody className="font-mono">
               <tr className="border-b border-dashed border-line">
-                <td className="py-2 text-ink">Mature biga</td>
+                <td className="py-2 text-ink">{isPoolish ? 'Mature poolish' : 'Mature biga'}</td>
                 <td className="py-2 text-ink-muted text-xs">—</td>
                 <td className="py-2 text-ink text-right font-semibold tabular-nums">{round(Fb + Wb + Yb)}</td>
               </tr>
@@ -273,7 +355,9 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
               </tr>
               <tr className="border-b border-dashed border-line">
                 <td className="py-2 text-ink">Water</td>
-                <td className="py-2 text-ink-muted text-xs">{round(finalHyd - bigaHyd * bigaPct / 100)}%</td>
+                <td className="py-2 text-ink-muted text-xs">
+                  {isPoolish ? round(finalHyd - 100 * bigaPct / 100) : round(finalHyd - bigaHyd * bigaPct / 100)}%
+                </td>
                 <td className="py-2 text-ink text-right font-semibold tabular-nums">{round(Wf)}</td>
               </tr>
               <tr className="border-b border-dashed border-line">
@@ -281,6 +365,13 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
                 <td className="py-2 text-ink-muted text-xs">{salt}%</td>
                 <td className="py-2 text-ink text-right font-semibold tabular-nums">{round(Sf)}</td>
               </tr>
+              {isPoolish && (
+                <tr className="border-b border-dashed border-line">
+                  <td className="py-2 text-ink">{useFreshYeast ? 'Fresh yeast' : 'Instant yeast'}</td>
+                  <td className="py-2 text-ink-muted text-xs">{round(mainYeastPct)}%</td>
+                  <td className="py-2 text-ink text-right font-semibold tabular-nums">{round(mainYeastG)}</td>
+                </tr>
+              )}
               <tr>
                 <td className="py-2 text-ink font-semibold" colSpan={2}>{balls} × {ballW}g</td>
                 <td className="py-2 text-ink text-right font-bold tabular-nums">{round(target)}</td>
@@ -303,14 +394,34 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
       <Card>
         <h2 className="font-semibold text-ink mb-4 flex items-center gap-2">
           <span className="text-lg">⚙️</span> Variables
-          <InfoPopover label="Biga yeast">
-            Set on a fresh-yeast basis, as a percentage of the biga's flour. This is the one dial
-            that has to move when you change the biga temperature or time — see Suggested yeast in
-            the Biga card for the amount that matches your current schedule.
-          </InfoPopover>
+          {isPoolish ? (
+            <InfoPopover label="Poolish yeast">
+              Set on a fresh-yeast basis: poolish yeast as a percentage of the poolish's flour,
+              main yeast as a percentage of the main dough's flour. Poolish keeps these fixed —
+              there is no schedule-driven suggestion — so the dials only move when you change your
+              recipe.
+            </InfoPopover>
+          ) : (
+            <InfoPopover label="Biga yeast">
+              Set on a fresh-yeast basis, as a percentage of the biga's flour. This is the one dial
+              that has to move when you change the biga temperature or time — see Suggested yeast in
+              the Biga card for the amount that matches your current schedule.
+            </InfoPopover>
+          )}
         </h2>
         <div className="space-y-4">
-          <NumberInput label="Biga yeast" value={bigaYeast} onChange={(v) => setParam('bigaYeastFine', String(v))} min={0.05} max={5} step={0.05} unit="%" />
+          <NumberInput label={isPoolish ? 'Poolish yeast' : 'Biga yeast'} value={bigaYeast} onChange={(v) => setParam('bigaYeastFine', String(v))} min={0.05} max={5} step={0.05} unit="%" />
+          {isPoolish && (
+            <NumberInput
+              label="Main yeast"
+              value={params.poolishMainYeastFine !== '' ? parseFloat(params.poolishMainYeastFine) : d.mainYeastPct}
+              onChange={(v) => setParam('poolishMainYeastFine', String(v))}
+              min={0.05}
+              max={5}
+              step={0.05}
+              unit="%"
+            />
+          )}
           <NumberInput label="Salt" value={salt} onChange={(v) => setParam('saltFine', String(v))} min={0.5} max={5} step={0.1} unit="%" />
         </div>
       </Card>
@@ -340,9 +451,9 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
                 </div>
               </div>
               <div>
-                <div className="text-sm text-ink">Mix biga</div>
+                <div className="text-sm text-ink">{isPoolish ? 'Mix poolish' : 'Mix biga'}</div>
                 <div className="text-xs text-ink-muted font-mono mt-0.5">
-                  {round(Fb)}g flour · {round(Wb)}g water · {round(d.yeastG)}g {useFreshYeast ? 'fresh yeast' : 'instant yeast'} — crumble, don't knead
+                  {round(Fb)}g flour · {round(Wb)}g water · {round(d.yeastG)}g {useFreshYeast ? 'fresh yeast' : 'instant yeast'} — {isPoolish ? 'mix, let ripen' : "crumble, don't knead"}
                 </div>
                 <div className="text-xs text-ink-muted font-mono">{bigaTime}h at {bigaTemp}°C</div>
               </div>
@@ -357,9 +468,16 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
               <div>
                 <div className="text-sm text-ink">Final mix</div>
                 <div className="text-xs text-ink-muted font-mono mt-0.5">
-                  add {round(Ff)}g flour · {round(Wf)}g water · {round(Sf)}g salt — ball up within 1–2 h
+                  add {round(Ff)}g flour · {round(Wf)}g water · {round(Sf)}g salt{isPoolish ? ` · ${round(mainYeastG)}g ${useFreshYeast ? 'fresh yeast' : 'instant yeast'}` : ''} — ball up within 1–2 h
                 </div>
-                <div className="text-xs text-ink-muted font-mono">{finalTime}h at {finalTemp}°C</div>
+                {isPoolish ? (
+                  <>
+                    <div className="text-xs text-ink-muted font-mono">room rest {roomTime}h at {roomTemp}°C</div>
+                    <div className="text-xs text-ink-muted font-mono">cold proof {finalTime}h at {finalTemp}°C</div>
+                  </>
+                ) : (
+                  <div className="text-xs text-ink-muted font-mono">{finalTime}h at {finalTemp}°C</div>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-[88px_1fr] gap-3 items-start py-2.5">
