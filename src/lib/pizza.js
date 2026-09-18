@@ -95,36 +95,143 @@ export function resolveParams(params) {
   return { salt, bigaHyd, bigaYeast }
 }
 
-// ── Fermentation rate model ──────────────────────────────────────────────────
-// Rate follows an Arrhenius law in absolute temperature rather than a fixed Q10.
-// ARRHENIUS_B (= Ea/R) is fitted so the rate multiplies by 2.5 per 10 °C at the
-// 18 °C reference. Because Arrhenius works on 1/T, the effective Q10 falls out
-// steeper in the cold (~2.7 near 4 °C) and shallower when warm (~2.35 at 28 °C),
-// which is how real dough behaves — a flat Q10 of 2 badly understates how much
-// the fridge slows things down.
-export const REF_TEMP_C = 18
-export const ARRHENIUS_B = 8034 // Ea/R in kelvin (Ea ≈ 66.8 kJ/mol)
+// ── Fermentation rate model (study-driven) ───────────────────────────────────
+// Birch et al. 2013 shows dough expansion peaks ~25°C and falls at 35°C, while
+// CO2 production keeps rising — dough expansion ≠ CO2. So we use a calibrated
+// temperature-response curve peaked at 25°C instead of an unbounded Arrhenius
+// exponential. Reference is 25°C = 1.0 per the study's shape proposal.
+//
+// Hydration is a small fermentation modifier (Codină et al. 2011) and a larger
+// handling/maturation modifier (Dufour et al. 2024). Salt modestly inhibits
+// yeast (Bernklau et al. 2017).
+export const REF_TEMP_C = 25
+// Keep exported for compat — no longer used internally.
+export const ARRHENIUS_B = 8034
 
+// Temperature-rate anchors from the study's proposed shape (± calibration)
+// 4°C 0.07 (mid 0.05-0.10), 8°C 0.20, 12°C 0.35, 16°C 0.55, 20°C 0.80, 22°C 0.90, 25°C 1.00, 28°C 1.05, 35°C 1.05 (plateau)
+const TEMP_RATE_TABLE = [
+  [4, 0.07],
+  [8, 0.2],
+  [12, 0.35],
+  [16, 0.55],
+  [20, 0.8],
+  [22, 0.9],
+  [25, 1.0],
+  [28, 1.05],
+  [35, 1.05],
+]
+
+// Maturation (gluten relaxation / extensibility) follows a flatter curve than
+// fermentation — cold still relaxes dough relatively faster than it ferments.
+const MATURATION_RATE_TABLE = [
+  [4, 0.18],
+  [8, 0.3],
+  [12, 0.45],
+  [16, 0.62],
+  [20, 0.83],
+  [22, 0.92],
+  [25, 1.0],
+  [28, 1.05],
+  [35, 1.05],
+]
+
+function lerpTable(table, temp) {
+  if (temp <= table[0][0]) return table[0][1]
+  if (temp >= table[table.length - 1][0]) return table[table.length - 1][1]
+  for (let i = 0; i < table.length - 1; i++) {
+    const [t0, r0] = table[i]
+    const [t1, r1] = table[i + 1]
+    if (temp >= t0 && temp <= t1) {
+      const f = (temp - t0) / (t1 - t0)
+      return r0 + f * (r1 - r0)
+    }
+  }
+  return table[table.length - 1][1]
+}
+
+export function temperatureRate(temp) {
+  return lerpTable(TEMP_RATE_TABLE, temp)
+}
+
+export function maturationRate(temp) {
+  return lerpTable(MATURATION_RATE_TABLE, temp)
+}
+
+// Keep old name as alias (normalized to 25°C reference)
 export function relativeRate(temp) {
-  return Math.exp(ARRHENIUS_B * (1 / (REF_TEMP_C + 273.15) - 1 / (temp + 273.15)))
+  return temperatureRate(temp)
 }
 
 export function equivalentHours(hours, temp) {
-  return hours * relativeRate(temp)
+  return hours * temperatureRate(temp)
+}
+
+// Hydration fermentation factor: small modifier per study
+// 55%→0.94, 60%→0.98, 65%→1.02, 70%→1.06 (linear, extrapolate)
+// Reference hydration for biga anchor is BIGA_HYD_DEFAULT (42%) which extrapolates to ~0.836
+const HYDRA_FERMENT_TABLE = [
+  [55, 0.94],
+  [60, 0.98],
+  [65, 1.02],
+  [70, 1.06],
+]
+
+export function fermentationHydrationFactor(hydration) {
+  const slope = 0.008 // 0.04 per 5%
+  if (hydration <= 55) return 0.94 + (hydration - 55) * slope
+  if (hydration >= 70) return 1.06 + (hydration - 70) * slope
+  // interpolate within table
+  for (let i = 0; i < HYDRA_FERMENT_TABLE.length - 1; i++) {
+    const [h0, f0] = HYDRA_FERMENT_TABLE[i]
+    const [h1, f1] = HYDRA_FERMENT_TABLE[i + 1]
+    if (hydration >= h0 && hydration <= h1) {
+      const frac = (hydration - h0) / (h1 - h0)
+      return f0 + frac * (f1 - f0)
+    }
+  }
+  return 1.0
+}
+
+export function hydrationMaturityFactor(hydration) {
+  // Larger handling impact: ~2.5× the fermentation slope
+  const ferm = fermentationHydrationFactor(hydration)
+  return clamp(1 + (ferm - 1) * 2.5, 0.7, 1.4)
+}
+
+export function saltFactor(saltPct) {
+  // Salt reference 2.7%. Each +1% salt inhibits fermentation ~9% (study: Bernklau 2017)
+  // Clamped to avoid extreme values at unreasonable salt.
+  return clamp(1 - 0.09 * (saltPct - SALT_DEFAULT), 0.7, 1.3)
+}
+
+// Fermentation exposure: Σ hours × tempRate × hydration × salt (study architecture)
+// Kept as "equivalent hours @25°C" for UI comparability.
+export function fermentationExposure(hours, temp, hydration, saltPct) {
+  const hf = hydration != null ? fermentationHydrationFactor(hydration) : 1
+  const sf = saltPct != null ? saltFactor(saltPct) : 1
+  return hours * temperatureRate(temp) * hf * sf
+}
+
+export function maturationExposure(hours, temp, hydration) {
+  const hf = hydration != null ? hydrationMaturityFactor(hydration) : 1
+  return hours * maturationRate(temp) * hf
 }
 
 // ── Yeast dose model ─────────────────────────────────────────────────────────
 // A biga is ripe once its yeast has produced a fixed amount of gas and acid, so
-// (yeast × rate × time) is what stays constant. Rate × time is exactly the
-// fermentation equivalent, which makes the required dose inversely proportional
-// to it: warmer or longer means proportionally less yeast, or the biga blows
-// past its peak and collapses.
+// (yeast × rate × time) stays constant. Rate × time is the fermentation
+// exposure, now including hydration and salt. Required dose is inversely
+// proportional to exposure.
 //
-// One anchor pins the whole curve: Giorilli's coded biga, 1% fresh yeast for
-// 18 h at 18 °C. That also reproduces the common summer advice of dropping to
-// ~0.7% fresh once the room sits in the low twenties.
+// Anchor remains Giorilli's coded biga: 1% fresh at 18h/18°C, but now
+// recalibrated to the new curve and hydration. Anchor hydration is BIGA_HYD_DEFAULT
+// (42%) with no salt in the pre-ferment.
 export const YEAST_ANCHOR_PCT = 1
-export const YEAST_ANCHOR_EQ_HOURS = 18
+// Anchor eq includes hydration factor at 42%: 18 * R(18)*hydra(42)
+const ANCHOR_TEMP_RATE = temperatureRate(18)
+const ANCHOR_HYDRA = fermentationHydrationFactor(BIGA_HYD_DEFAULT)
+export const YEAST_ANCHOR_EQ_HOURS = 18 * ANCHOR_TEMP_RATE * ANCHOR_HYDRA
 export const YEAST_MIN_PCT = 0.05
 export const YEAST_MAX_PCT = 2
 
@@ -149,7 +256,7 @@ export function yeastDoseLevel(actualPct, suggestedPct) {
 
 export const YEAST_DOSE_TEXT = {
   high: 'More yeast than this temperature and time need — the biga may peak early and collapse.',
-  ok: 'In step with the biga temperature and time.',
+  ok: 'In step with the biga temperature, time and hydration.',
   low: 'Less yeast than this temperature and time need — the biga may still be under-ripe.',
 }
 
@@ -171,6 +278,35 @@ export function fermentationLevel(eqHours) {
   return 'extended'
 }
 
+// ── Maturation model ─────────────────────────────────────────────────────────
+export const MATURITY_TEXT = {
+  'very-short': 'Firm — still resistant',
+  short: 'Slightly relaxed',
+  medium: 'Balanced — extensible but elastic',
+  long: 'Soft — nicely extensible',
+  'very-long': 'Very extensible — handle gently',
+  extended: 'Over-mature — may lack strength',
+}
+
+export function maturationLevel(matHours) {
+  if (matHours < 2) return 'very-short'
+  if (matHours < 6) return 'short'
+  if (matHours < 12) return 'medium'
+  if (matHours < 24) return 'long'
+  if (matHours < 48) return 'very-long'
+  return 'extended'
+}
+
+export function doughPrediction(fermLevel, matLevel) {
+  // Simple heuristic combining Fermentation and Maturity bands
+  const over = (fermLevel === 'very-long' || fermLevel === 'extended') && (matLevel === 'very-long' || matLevel === 'extended')
+  const under = fermLevel === 'very-short' || matLevel === 'very-short'
+  if (over) return 'May be highly extensible with reduced strength — shorten time or cool down if handling suffers.'
+  if (under) return 'Under-mature — expect firmer dough with less extensibility.'
+  if (fermLevel === 'long' && matLevel === 'long') return 'Good fermentation level — dough should retain reasonable elasticity.'
+  return 'Balanced proof and handling window.'
+}
+
 export function computeDough(params) {
   const resolved = resolveParams(params)
   const { salt, bigaHyd, bigaYeast } = resolved
@@ -181,6 +317,7 @@ export function computeDough(params) {
   const target = params.balls * params.ballW * 1.02
 
   let F, Fb, Wb, Yb, Ff, Wf, Sf, bigaEq, finalEq
+  let bigaMat = 0, finalMat = 0, roomMat = 0, coldMat = 0
   let mainYeastPct = 0
   let mainYeastG = 0
   let roomEq = 0
@@ -200,10 +337,15 @@ export function computeDough(params) {
     Sf = (F * salt) / 100
     mainYeastPct = mainYeast
     mainYeastG = (Ff * mainYeast) / 100
-    bigaEq = equivalentHours(params.bigaTime, params.bigaTemp)
-    roomEq = equivalentHours(roomTime, roomTemp)
-    coldEq = equivalentHours(params.finalTime, params.finalTemp)
+    // Poolish is 100% hydration, salt-free pre-ferment
+    bigaEq = fermentationExposure(params.bigaTime, params.bigaTemp, 100, null)
+    bigaMat = maturationExposure(params.bigaTime, params.bigaTemp, 100)
+    roomEq = fermentationExposure(roomTime, roomTemp, params.finalHyd, salt)
+    roomMat = maturationExposure(roomTime, roomTemp, params.finalHyd)
+    coldEq = fermentationExposure(params.finalTime, params.finalTemp, params.finalHyd, salt)
+    coldMat = maturationExposure(params.finalTime, params.finalTemp, params.finalHyd)
     finalEq = roomEq + coldEq
+    finalMat = roomMat + coldMat
   } else {
     F =
       target /
@@ -214,12 +356,18 @@ export function computeDough(params) {
     Ff = F - Fb
     Wf = (F * params.finalHyd) / 100 - Wb
     Sf = (F * salt) / 100
-    bigaEq = equivalentHours(params.bigaTime, params.bigaTemp)
-    finalEq = equivalentHours(params.finalTime, params.finalTemp)
+    // Biga: hydration matters, salt-free. Final: hydration + salt matter.
+    bigaEq = fermentationExposure(params.bigaTime, params.bigaTemp, bigaHyd, null)
+    bigaMat = maturationExposure(params.bigaTime, params.bigaTemp, bigaHyd)
+    finalEq = fermentationExposure(params.finalTime, params.finalTemp, params.finalHyd, salt)
+    finalMat = maturationExposure(params.finalTime, params.finalTemp, params.finalHyd)
     // bigaYeast is always held on a fresh-yeast basis; the instant conversion
     // is applied only where the amount is shown.
     suggestion = suggestedFreshYeast(bigaEq)
   }
+
+  const totalEq = params.prefermentType === 'poolish' ? bigaEq + roomEq + coldEq : bigaEq + finalEq
+  const totalMat = params.prefermentType === 'poolish' ? bigaMat + roomMat + coldMat : bigaMat + finalMat
 
   return {
     salt,
@@ -246,7 +394,14 @@ export function computeDough(params) {
     finalEq,
     roomEq,
     coldEq,
-    totalEq: params.prefermentType === 'poolish' ? bigaEq + roomEq + coldEq : bigaEq + finalEq,
+    totalEq,
+    bigaMat,
+    finalMat,
+    roomMat,
+    coldMat,
+    totalMat,
+    maturityLevel: maturationLevel(totalMat),
+    handlingPrediction: doughPrediction(fermentationLevel(totalEq), maturationLevel(totalMat)),
     suggestedYeast: suggestion,
     // Suggestions are quoted on the same basis as the table above them.
     suggestedYeastPct: suggestion

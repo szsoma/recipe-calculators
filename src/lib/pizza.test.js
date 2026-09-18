@@ -117,32 +117,39 @@ describe('computeDough', () => {
 })
 
 describe('relativeRate and equivalentHours', () => {
-  it('is the identity at the 18C reference', () => {
-    expect(relativeRate(18)).toBeCloseTo(1, 10)
-    expect(equivalentHours(12, 18)).toBeCloseTo(12, 10)
+  it('is the identity at the 25C reference (study peak ~25°C per Birch 2013)', () => {
+    expect(relativeRate(25)).toBeCloseTo(1, 10)
+    expect(equivalentHours(12, 25)).toBeCloseTo(12, 10)
   })
 
-  it('multiplies the rate by 2.5 per 10C at the reference', () => {
-    expect(relativeRate(28) / relativeRate(18)).toBeCloseTo(2.5, 4)
+  it('peaks near 25°C and does not grow unbounded above 28°C (gas ≠ volume)', () => {
+    expect(relativeRate(25)).toBeCloseTo(1, 10)
+    expect(relativeRate(28)).toBeCloseTo(1.05, 2)
+    expect(relativeRate(35)).toBeCloseTo(1.05, 2)
+    expect(relativeRate(28) / relativeRate(18)).toBeLessThan(2)
   })
 
-  it('is steeper in the cold and shallower when warm', () => {
-    const q10 = (t) => relativeRate(t + 10) / relativeRate(t)
-    expect(q10(4)).toBeGreaterThan(q10(18))
-    expect(q10(18)).toBeGreaterThan(q10(28))
-    expect(q10(4)).toBeCloseTo(2.744, 2)
-    expect(q10(28)).toBeCloseTo(2.357, 2)
+  it('is steeper in the cold — fridge fermentation is very slow', () => {
+    // Study curve: 4°C ~0.07, 12°C 0.35, 18°C 0.675
+    expect(relativeRate(4)).toBeCloseTo(0.07, 2)
+    expect(relativeRate(12)).toBeCloseTo(0.35, 2)
+    expect(relativeRate(18)).toBeCloseTo(0.675, 2)
+    const q10Cold = relativeRate(14) / relativeRate(4)
+    const q10Warm = relativeRate(28) / relativeRate(18)
+    expect(q10Cold).toBeGreaterThan(q10Warm)
   })
 
   it('slows the fridge down far more than a flat Q10 of 2 would', () => {
-    // Flat Q10=2 put 24h at 4C at 9.1 equivalent hours, which overstated it.
-    expect(equivalentHours(24, 4)).toBeCloseTo(5.954, 2)
+    // 24h at 4°C @25°C ref = 24*0.07 = 1.68h (vs flat Q10 9.1h)
+    expect(equivalentHours(24, 4)).toBeCloseTo(1.68, 2)
   })
 })
 
 describe('suggestedFreshYeast', () => {
-  it('reproduces the Giorilli anchor: 1% fresh for 18h at 18C', () => {
-    const s = suggestedFreshYeast(equivalentHours(18, 18))
+  it('reproduces the Giorilli anchor with hydration-corrected exposure', () => {
+    // Anchor is 1% fresh for 18h at 18°C, 42% hyd, now hydration-aware: 18*0.675*0.836=10.16h
+    const anchorEq = equivalentHours(18, 18) * 0.836
+    const s = suggestedFreshYeast(anchorEq)
     expect(s.pct).toBeCloseTo(1, 6)
     expect(s.belowFloor).toBe(false)
     expect(s.aboveCeiling).toBe(false)
@@ -156,8 +163,8 @@ describe('suggestedFreshYeast', () => {
     const at = (temp) => suggestedFreshYeast(equivalentHours(18, temp)).pct
     expect(at(22)).toBeLessThan(at(18))
     expect(at(25)).toBeLessThan(at(22))
-    // Matches the common summer guidance of dropping to roughly 0.7% fresh.
-    expect(at(22)).toBeCloseTo(0.69, 2)
+    // Study curve is flatter above 25°C (plateau), summer dose lower than Arrhenius
+    expect(at(22)).toBeCloseTo(0.627, 2)
   })
 
   it('clamps and flags doses that fall outside a weighable range', () => {
@@ -294,7 +301,7 @@ describe('resolveParams poolish', () => {
 })
 
 describe('computeDough poolish', () => {
-  it('matches the verified poolish default batch', () => {
+  it('matches the verified poolish default batch (study curve, 25°C ref, hydra+salt)', () => {
     const d = computeDough(POOLISH_PARAMS)
     expect(round(d.target)).toBe(1101.6)
     expect(round(d.F)).toBe(644.8)
@@ -306,11 +313,11 @@ describe('computeDough poolish', () => {
     expect(round(d.Sf)).toBe(16.1)
     expect(round(d.mainYeastG)).toBe(1.9)
     expect(round(d.total)).toBe(1101.6)
-    expect(round(d.bigaEq)).toBe(25.5)
-    expect(round(d.roomEq)).toBe(1.6)
-    expect(round(d.coldEq)).toBe(7.3)
-    expect(round(d.finalEq)).toBe(8.9)
-    expect(round(d.totalEq)).toBe(34.4)
+    expect(round(d.bigaEq)).toBe(19.4)
+    expect(round(d.roomEq)).toBe(1)
+    expect(round(d.coldEq)).toBe(3.4)
+    expect(round(d.finalEq)).toBe(4.4)
+    expect(round(d.totalEq)).toBe(23.8)
   })
 
   it('sums the components back to the target dough weight', () => {

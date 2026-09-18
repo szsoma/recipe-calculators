@@ -10,6 +10,8 @@ import {
   buildRecipeText,
   fermentationLevel,
   FERMENTATION_TEXT,
+  maturationLevel,
+  MATURITY_TEXT,
   YEAST_DOSE_TEXT,
   formatDateTime,
   prefermentDefaults,
@@ -50,6 +52,7 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
   const roomLevel = fermentationLevel(d.roomEq)
   const coldLevel = fermentationLevel(d.coldEq)
   const totalLevel = fermentationLevel(d.totalEq)
+  const totalMatLevel = maturationLevel(d.totalMat)
   const { suggestedYeast, suggestedYeastPct, yeastDose } = d
   const yeastUnit = useFreshYeast ? 'fresh' : 'instant'
   const suggestionMatches = suggestedYeast && round(bigaYeast) === round(suggestedYeast.pct)
@@ -147,16 +150,17 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
               <span className="text-sm text-ink-muted flex items-center gap-1">
                 Fermentation equivalent
                 <InfoPopover label="Fermentation equivalent" align="left">
-                  How much fermentation this stage actually delivers, restated as hours at 18°C so
-                  you can compare a cold slow biga against a warm fast one. Yeast activity follows
-                  an Arrhenius curve: around 18°C the rate multiplies by roughly 2.5 for every
-                  +10°C, and because the curve works on absolute temperature that factor is steeper
-                  in the cold (~2.7 near 4°C) and shallower when warm (~2.35 at 28°C).
+                  How much fermentation this stage delivers, restated as hours at 25°C so you can
+                  compare a cold slow biga against a warm fast one. Rate follows Birch et al. 2013:
+                  fastest around 25°C, slower at 35°C (gas ≠ volume). Each hour is also scaled by
+                  hydration (~0.94 at 55% → 1.06 at 70%) and salt (~−9% per +1% salt).
+                  Reference anchored to Giorilli's biga (1% fresh, 18h at 18°C, ~42% hydration).
                 </InfoPopover>
               </span>
-              <span className="text-ink font-bold">{round(bigaEq)}h @ 18°C</span>
+              <span className="text-ink font-bold">{round(bigaEq)}h @ 25°C</span>
             </div>
             <p className={`text-xs font-medium ${FERMENTATION_COLOR[bigaLevel]}`}>{FERMENTATION_TEXT[bigaLevel]}</p>
+            <p className="text-[11px] text-ink-muted mt-1">Hydration + salt factored — change either and the grams move.</p>
           </div>
 
           {!isPoolish && suggestedYeast && (
@@ -165,11 +169,10 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
                 <span className="text-sm text-ink-muted flex items-center gap-1">
                   Suggested yeast
                   <InfoPopover label="Suggested yeast" align="left">
-                    A biga is ripe once its yeast has produced a set amount of gas and acid, so
-                    yeast × rate × time stays constant — and rate × time is the fermentation
-                    equivalent above. Raise the temperature and the same dose does that work sooner,
-                    so the dose has to come down or the biga peaks early and collapses. The curve is
-                    pinned to Giorilli's coded biga: 1% fresh yeast, 18 h at 18°C.
+                    Yeast × fermentation exposure stays constant. Exposure is Σ hours × temperatureRate
+                    × hydrationFactor × saltFactor. Warmer, longer or higher hydration needs less
+                    yeast or the biga peaks early and collapses. Pinned to Giorilli's biga: 1% fresh,
+                    18h at 18°C (~42% hyd). Hydration change from 42% to 65% shifts the dose ~17%.
                   </InfoPopover>
                 </span>
                 <span className="text-ink font-bold tabular-nums">
@@ -211,9 +214,10 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
               <div className="bg-sunken rounded-xl p-3 border border-line">
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-sm text-ink-muted">Fermentation equivalent</span>
-                  <span className="text-ink font-bold">{round(finalEq)}h @ 18°C</span>
+                  <span className="text-ink font-bold">{round(finalEq)}h @ 25°C</span>
                 </div>
                 <p className={`text-xs font-medium ${FERMENTATION_COLOR[finalLevel]}`}>{FERMENTATION_TEXT[finalLevel]}</p>
+                <p className="text-[11px] text-ink-muted mt-1">Hydration + salt factored.</p>
               </div>
             </>
           )}
@@ -228,7 +232,7 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
                 <NumberInput label="Room rest temperature" value={roomTemp} onChange={(v) => setParam('roomTemp', v)} min={0} max={35} step={1} unit="°C" />
                 <div className="flex justify-between items-center mt-3">
                   <span className="text-sm text-ink-muted">Fermentation equivalent</span>
-                  <span className="text-ink font-bold">{round(d.roomEq)}h @ 18°C</span>
+                  <span className="text-ink font-bold">{round(d.roomEq)}h @ 25°C</span>
                 </div>
                 <p className={`text-xs font-medium mt-1 ${FERMENTATION_COLOR[roomLevel]}`}>{FERMENTATION_TEXT[roomLevel]}</p>
               </div>
@@ -241,7 +245,7 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
                 <NumberInput label="Cold proof temperature" value={finalTemp} onChange={(v) => setParam('finalTemp', v)} min={-4} max={30} step={1} unit="°C" />
                 <div className="flex justify-between items-center mt-3">
                   <span className="text-sm text-ink-muted">Fermentation equivalent</span>
-                  <span className="text-ink font-bold">{round(d.coldEq)}h @ 18°C</span>
+                  <span className="text-ink font-bold">{round(d.coldEq)}h @ 25°C</span>
                 </div>
                 <p className={`text-xs font-medium mt-1 ${FERMENTATION_COLOR[coldLevel]}`}>{FERMENTATION_TEXT[coldLevel]}</p>
               </div>
@@ -254,13 +258,19 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
                 Total maturation
                 <InfoPopover label="Total maturation" align="left">
                   {isPoolish
-                    ? 'Poolish plus room rest and cold proof. The yeast you dosed into the poolish keeps working after the final mix, so over-fermentation is a total-budget problem, not a per-stage one.'
-                    : 'Biga plus final dough. The yeast you dosed into the biga keeps working after the final mix, so over-fermentation is a total-budget problem, not a per-stage one. The suggested yeast above only balances the biga stage — if this total runs long, shorten the final stage or drop its temperature rather than cutting yeast further.'}
+                    ? 'Fermentation (CO₂) and maturity (gluten relaxation) are separate per Covino et al. 2023. Poolish + room + cold. Exposure is Σ hours × temperatureRate × hydration × salt. Hydration affects handling ~2.5× more than gas. Over-fermentation is a total-budget problem.'
+                    : 'Fermentation (gas) and maturity (extensibility) evolve separately. Biga + final. Σ exposure as above; biga dose only balances the biga stage — if total runs long, shorten final time or cool it rather than cutting yeast further. Capped yeast means lengthen/warm instead.'}
                 </InfoPopover>
               </span>
-              <span className="text-ink font-bold">{round(d.totalEq)}h @ 18°C</span>
+              <span className="text-ink font-bold">{round(d.totalEq)}h @ 25°C</span>
             </div>
-            <p className={`text-xs font-medium ${FERMENTATION_COLOR[totalLevel]}`}>{FERMENTATION_TEXT[totalLevel]}</p>
+            <p className={`text-xs font-medium ${FERMENTATION_COLOR[totalLevel]}`}>Fermentation: {FERMENTATION_TEXT[totalLevel]}</p>
+            <div className="flex justify-between items-center mt-2">
+              <span className="text-xs text-ink-muted">Maturity (handling)</span>
+              <span className="text-ink font-bold text-sm">{round(d.totalMat)}h</span>
+            </div>
+            <p className={`text-xs font-medium ${FERMENTATION_COLOR[totalMatLevel]}`}>{MATURITY_TEXT[totalMatLevel]}</p>
+            <p className="text-[11px] text-ink-muted mt-2 italic">{d.handlingPrediction}</p>
           </div>
         </div>
       </Card>
@@ -505,8 +515,7 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
 
       {/* Footer */}
       <p className="text-center text-xs text-ink-muted italic pb-4 font-mono">
-        Rate follows an Arrhenius curve (×2.5 per 10°C at 18°C, steeper cold, shallower warm), so each stage is shown as equivalent hours at 18°C.<br />
-        Above ~30°C yeast nears its optimum and stops speeding up as modelled. A planning aid, not a verdict — watch the dough.
+        Fermentation rate peaks near 25°C per Birch et al. 2013 (gas ≠ volume per Limongi 2012) — stages shown as h @ 25°C and scaled by hydration (55% 0.94 → 70% 1.06) + salt (−9%/+1%). Maturity tracks gluten relaxation separately (Covino 2023, Dufour 2024). A planning aid — watch the dough.
       </p>
     </div>
   )
