@@ -309,7 +309,9 @@ export function doughPrediction(fermLevel, matLevel) {
 
 export function computeDough(params) {
   const resolved = resolveParams(params)
-  const { salt, bigaHyd, bigaYeast } = resolved
+  const salt = resolved.salt
+  const bigaHyd = resolved.bigaHyd
+  let bigaYeast = resolved.bigaYeast
   // Legacy/blank params may lack the new keys; fall back so they can't NaN.
   const roomTime = params.roomTime ?? POOLISH_ROOM_TIME_DEFAULT
   const roomTemp = params.roomTemp ?? POOLISH_ROOM_TEMP_DEFAULT
@@ -347,23 +349,27 @@ export function computeDough(params) {
     finalEq = roomEq + coldEq
     finalMat = roomMat + coldMat
   } else {
-    F =
-      target /
-      (1 + params.finalHyd / 100 + salt / 100 + (bigaYeast / 100) * (params.bigaPct / 100))
-    Fb = (F * params.bigaPct) / 100
-    Wb = (Fb * bigaHyd) / 100
-    Yb = (Fb * bigaYeast) / 100
-    Ff = F - Fb
-    Wf = (F * params.finalHyd) / 100 - Wb
-    Sf = (F * salt) / 100
     // Biga: hydration matters, salt-free. Final: hydration + salt matter.
     bigaEq = fermentationExposure(params.bigaTime, params.bigaTemp, bigaHyd, null)
     bigaMat = maturationExposure(params.bigaTime, params.bigaTemp, bigaHyd)
     finalEq = fermentationExposure(params.finalTime, params.finalTemp, params.finalHyd, salt)
     finalMat = maturationExposure(params.finalTime, params.finalTemp, params.finalHyd)
-    // bigaYeast is always held on a fresh-yeast basis; the instant conversion
-    // is applied only where the amount is shown.
     suggestion = suggestedFreshYeast(bigaEq)
+    // Yeast is fully dynamic per user request: it recalculates immediately
+    // when time / temp / hydration change. The grams in Recipe are always
+    // derived from the study model, so the display is live.
+    const effectiveYeast = suggestion ? suggestion.pct : BIGA_YEAST_DEFAULT
+    bigaYeast = effectiveYeast
+    resolved.bigaYeast = effectiveYeast
+    F =
+      target /
+      (1 + params.finalHyd / 100 + salt / 100 + (effectiveYeast / 100) * (params.bigaPct / 100))
+    Fb = (F * params.bigaPct) / 100
+    Wb = (Fb * bigaHyd) / 100
+    Yb = (Fb * effectiveYeast) / 100
+    Ff = F - Fb
+    Wf = (F * params.finalHyd) / 100 - Wb
+    Sf = (F * salt) / 100
   }
 
   const totalEq = params.prefermentType === 'poolish' ? bigaEq + roomEq + coldEq : bigaEq + finalEq

@@ -56,6 +56,7 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
   const { suggestedYeast, suggestedYeastPct, yeastDose } = d
   const yeastUnit = useFreshYeast ? 'fresh' : 'instant'
   const suggestionMatches = suggestedYeast && round(bigaYeast) === round(suggestedYeast.pct)
+  const isAutoYeast = !isPoolish // biga yeast is now always auto — recalculates immediately on time/temp/hydration
 
   function handlePrefermentType(next) {
     setParam('prefermentType', next)
@@ -167,32 +168,44 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
             <div className="bg-sunken rounded-xl p-3 border border-line">
               <div className="flex justify-between items-center mb-1">
                 <span className="text-sm text-ink-muted flex items-center gap-1">
-                  Suggested yeast
-                  <InfoPopover label="Suggested yeast" align="left">
-                    Yeast × fermentation exposure stays constant. Exposure is Σ hours × temperatureRate
-                    × hydrationFactor × saltFactor. Warmer, longer or higher hydration needs less
-                    yeast or the biga peaks early and collapses. Pinned to Giorilli's biga: 1% fresh,
-                    18h at 18°C (~42% hyd). Hydration change from 42% to 65% shifts the dose ~17%.
+                  {isAutoYeast ? 'Yeast — auto' : 'Suggested yeast'}
+                  <InfoPopover label={isAutoYeast ? 'Auto yeast' : 'Suggested yeast'} align="left">
+                    {isAutoYeast
+                      ? 'Auto mode is on (yeast field empty). Yeast is calculated from time × temperatureRate × hydration × salt so the grams in Recipe update live when you change any dial. Enter a value in Variables to lock it manually.'
+                      : 'Yeast × fermentation exposure stays constant. Exposure is Σ hours × temperatureRate × hydrationFactor × saltFactor. Warmer, longer or higher hydration needs less yeast or the biga peaks early and collapses. Pinned to Giorilli\'s biga: 1% fresh, 18h at 18°C (~42% hyd). Tap Use to snap to auto, or clear the field to return to auto.'}
                   </InfoPopover>
+                  {isAutoYeast && <span className="ml-1 inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-[10px] font-semibold px-2 py-0.5">AUTO</span>}
                 </span>
                 <span className="text-ink font-bold tabular-nums">
                   {round(suggestedYeastPct)}% {yeastUnit}
+                  {isAutoYeast && <span className="ml-1 text-xs font-normal text-green-700 dark:text-green-300">↻ live</span>}
                 </span>
               </div>
               <p className={`text-xs font-medium ${YEAST_DOSE_COLOR[yeastDose]}`}>
-                {suggestedYeast.aboveCeiling
-                  ? 'Capped at 2% — this is too cold or too short for the biga to ripen fully. Give it longer or warmer.'
-                  : suggestedYeast.belowFloor
-                    ? 'Floored at 0.05% — too little to weigh reliably. Shorten the biga or cool it down.'
-                    : YEAST_DOSE_TEXT[yeastDose]}
+                {isAutoYeast
+                  ? `Auto-calculated — Recipe grams follow this value. ${YEAST_DOSE_TEXT[yeastDose]}`
+                  : suggestedYeast.aboveCeiling
+                    ? 'Capped at 2% — this is too cold or too short for the biga to ripen fully. Give it longer or warmer.'
+                    : suggestedYeast.belowFloor
+                      ? 'Floored at 0.05% — too little to weigh reliably. Shorten the biga or cool it down.'
+                      : YEAST_DOSE_TEXT[yeastDose]}
               </p>
-              {!suggestionMatches && (
+              {!isAutoYeast && !suggestionMatches && (
                 <button
                   type="button"
                   onClick={() => setParam('bigaYeastFine', String(round(suggestedYeast.pct)))}
                   className="mt-2 w-full min-h-11 rounded-lg border border-line bg-surface text-sm font-medium text-ink hover:bg-line active:scale-[0.99] transition"
                 >
                   Use {round(suggestedYeastPct)}% (now {round(d.yeastPct)}%)
+                </button>
+              )}
+              {!isAutoYeast && (
+                <button
+                  type="button"
+                  onClick={() => setParam('bigaYeastFine', '')}
+                  className="mt-2 w-full min-h-11 rounded-lg border border-dashed border-line bg-sunken text-xs font-medium text-ink-muted hover:bg-surface transition"
+                >
+                  ↺ Back to auto (live)
                 </button>
               )}
             </div>
@@ -331,9 +344,9 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
                 <td className="py-2 text-ink text-right font-semibold tabular-nums">{round(Wb)}</td>
               </tr>
               <tr className="border-b border-dashed border-line">
-                <td className="py-2 text-ink">{useFreshYeast ? 'Fresh yeast' : 'Instant yeast'}</td>
-                <td className="py-2 text-ink-muted text-xs">{round(d.yeastPct)}%</td>
-                <td className="py-2 text-ink text-right font-semibold tabular-nums">{round(d.yeastG)}</td>
+                <td className="py-2 text-ink">{useFreshYeast ? 'Fresh yeast' : 'Instant yeast'} {isAutoYeast && <span className="text-[10px] text-green-700 dark:text-green-300 font-normal">auto</span>}</td>
+                <td className="py-2 text-ink-muted text-xs">{round(d.yeastPct)}%{isAutoYeast && ' auto'}</td>
+                <td className="py-2 text-ink text-right font-semibold tabular-nums">{round(d.yeastG)} {isAutoYeast && <span className="text-[10px] text-green-600 dark:text-green-400">↻</span>}</td>
               </tr>
               <tr>
                 <td className="py-2 text-ink font-semibold" colSpan={2}>{isPoolish ? 'Poolish total' : 'Biga total'}</td>
@@ -413,14 +426,25 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
             </InfoPopover>
           ) : (
             <InfoPopover label="Biga yeast">
-              Set on a fresh-yeast basis, as a percentage of the biga's flour. This is the one dial
-              that has to move when you change the biga temperature or time — see Suggested yeast in
-              the Biga card for the amount that matches your current schedule.
+              Auto when empty — grams in Recipe follow time/temp/hydration live. Enter a value to lock it manually; clear to return to auto.
             </InfoPopover>
           )}
         </h2>
         <div className="space-y-4">
-          <NumberInput label={isPoolish ? 'Poolish yeast' : 'Biga yeast'} value={bigaYeast} onChange={(v) => setParam('bigaYeastFine', String(v))} min={0.05} max={5} step={0.05} unit="%" />
+          {isPoolish ? (
+            <NumberInput label="Poolish yeast" value={bigaYeast} onChange={(v) => setParam('bigaYeastFine', String(v))} min={0.05} max={5} step={0.05} unit="%" />
+          ) : (
+            <div className="bg-sunken rounded-xl p-3 border border-line">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-ink flex items-center gap-1.5">
+                  Biga yeast <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-[10px] font-semibold px-2 py-0.5">AUTO</span>
+                  <span className="text-[11px] text-green-600 dark:text-green-400 font-normal">↻ live</span>
+                </span>
+                <span className="text-ink font-bold tabular-nums">{round(bigaYeast)}% <span className="text-xs font-normal text-ink-muted">· {round(d.yeastG)}g {useFreshYeast ? 'fresh' : 'instant'}</span></span>
+              </div>
+              <p className="text-[11px] text-ink-muted mt-1.5">Calculated from time × temp × hydration × salt — change any dial and the grams update immediately. No manual field needed; the Recipe below mirrors this value.</p>
+            </div>
+          )}
           {isPoolish && (
             <NumberInput
               label="Main yeast"

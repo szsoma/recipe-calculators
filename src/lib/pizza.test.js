@@ -73,16 +73,24 @@ describe('resolveParams', () => {
 })
 
 describe('computeDough', () => {
-  it('matches the known default batch', () => {
+  it('matches the known default batch (auto yeast: longer time/hydration now auto-adjusts grams)', () => {
+    // DEFAULT has bigaYeastFine='' → auto yeast 1.5% for 12h@18°C 42% hyd (6.77h eq)
     const d = computeDough(DEFAULT_PIZZA_PARAMS)
     expect(round(d.target)).toBe(1060.8)
-    expect(round(d.F)).toBe(631.4)
-    expect(round(d.Fb)).toBe(189.4)
-    expect(round(d.Wb)).toBe(79.6)
-    expect(round(d.Yb)).toBe(1.9)
-    expect(round(d.Ff)).toBe(442)
-    expect(round(d.Wf)).toBe(330.9)
+    expect(round(d.F)).toBe(630.9)
+    expect(round(d.Fb)).toBe(189.3)
+    expect(round(d.Wb)).toBe(79.5)
+    expect(round(d.Yb)).toBe(2.8)
+    expect(round(d.Ff)).toBe(441.6)
+    expect(round(d.Wf)).toBe(330.6)
     expect(round(d.Sf)).toBe(17)
+  })
+
+  it('ignores a stored manual bigaYeastFine — yeast is now always auto (live)', () => {
+    const d = computeDough({ ...DEFAULT_PIZZA_PARAMS, bigaYeastFine: '1' })
+    // Even with bigaYeastFine='1', biga yeast is auto 1.5% for 12h@18°C 42% hyd
+    expect(round(d.F)).toBe(630.9)
+    expect(round(d.Yb)).toBe(2.8)
   })
 
   it('sums the components back to the target dough weight', () => {
@@ -103,9 +111,10 @@ describe('computeDough', () => {
   })
 
   it('divides the displayed yeast by three for instant yeast', () => {
-    const params = { ...DEFAULT_PIZZA_PARAMS, useFreshYeast: false, bigaYeastFine: '1' }
+    const params = { ...DEFAULT_PIZZA_PARAMS, useFreshYeast: false }
     const d = computeDough(params)
-    expect(d.yeastPct).toBeCloseTo(1 / 3, 10)
+    // auto yeast for default is 1.5% fresh → 0.5% instant
+    expect(d.yeastPct).toBeCloseTo(d.bigaYeast / 3, 10)
     expect(d.yeastG).toBeCloseTo(d.Yb / 3, 10)
   })
 
@@ -224,7 +233,7 @@ describe('computeSchedule', () => {
 describe('buildRecipeText', () => {
   it('includes the totals and omits the schedule when there is no bake time', () => {
     const text = buildRecipeText(DEFAULT_PIZZA_PARAMS)
-    expect(text).toContain('Flour total: 631.4g')
+    expect(text).toContain('Flour total: 630.9g')
     expect(text).toContain('4 balls')
     expect(text).not.toContain('Schedule')
   })
@@ -236,8 +245,8 @@ describe('buildRecipeText', () => {
   })
 
   it('uses the displayed instant yeast amount', () => {
-    const text = buildRecipeText({ ...DEFAULT_PIZZA_PARAMS, useFreshYeast: false, bigaYeastFine: '1' })
-    expect(text).toContain('Yeast (Instant): 0.6g')
+    const text = buildRecipeText({ ...DEFAULT_PIZZA_PARAMS, useFreshYeast: false })
+    expect(text).toContain('Yeast (Instant): 0.9g')
   })
 })
 
