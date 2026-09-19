@@ -20,8 +20,6 @@ export const DEFAULT_PIZZA_PARAMS = {
   finalTemp: 20,
   finalTime: 10,
   prefermentType: 'biga',
-  roomTime: POOLISH_ROOM_TIME_DEFAULT,
-  roomTemp: POOLISH_ROOM_TEMP_DEFAULT,
   useFreshYeast: true,
   bigaHydFine: '',
   bigaYeastFine: '',
@@ -50,8 +48,6 @@ export function prefermentDefaults(type) {
       finalHyd: 68,
       finalTemp: 6,
       finalTime: 24,
-      roomTemp: POOLISH_ROOM_TEMP_DEFAULT,
-      roomTime: POOLISH_ROOM_TIME_DEFAULT,
       poolishMainYeastFine: '0.5',
       saltFine: '2.5',
       useFreshYeast: true,
@@ -68,8 +64,6 @@ export function prefermentDefaults(type) {
     finalHyd: FINAL_HYD_DEFAULT,
     finalTemp: 20,
     finalTime: 10,
-    roomTemp: POOLISH_ROOM_TEMP_DEFAULT,
-    roomTime: POOLISH_ROOM_TIME_DEFAULT,
     poolishMainYeastFine: '0.5',
     saltFine: '',
     useFreshYeast: true,
@@ -312,22 +306,36 @@ export function computeDough(params) {
   const salt = resolved.salt
   const bigaHyd = resolved.bigaHyd
   let bigaYeast = resolved.bigaYeast
-  // Legacy/blank params may lack the new keys; fall back so they can't NaN.
-  const roomTime = params.roomTime ?? POOLISH_ROOM_TIME_DEFAULT
-  const roomTemp = params.roomTemp ?? POOLISH_ROOM_TEMP_DEFAULT
 
   const target = params.balls * params.ballW * 1.02
 
   let F, Fb, Wb, Yb, Ff, Wf, Sf, bigaEq, finalEq
-  let bigaMat = 0, finalMat = 0, roomMat = 0, coldMat = 0
+  let bigaMat = 0, finalMat = 0
   let mainYeastPct = 0
   let mainYeastG = 0
-  let roomEq = 0
-  let coldEq = 0
+  const roomEq = 0
+  const coldEq = 0
+  const roomMat = 0
+  const coldMat = 0
   let suggestion = null
 
   if (params.prefermentType === 'poolish') {
-    const mainYeast = resolved.poolishMainYeast
+    // Poolish yeasts are fully dynamic so final proof temp immediately moves grams
+    bigaEq = fermentationExposure(params.bigaTime, params.bigaTemp, 100, null)
+    bigaMat = maturationExposure(params.bigaTime, params.bigaTemp, 100)
+    finalEq = fermentationExposure(params.finalTime, params.finalTemp, params.finalHyd, salt)
+    finalMat = maturationExposure(params.finalTime, params.finalTemp, params.finalHyd)
+    // Anchors: 0.1% poolish yeast for 16h@23°C 100% hyd (19.41h eq), 0.5% main yeast for 24h@6°C 68% hyd 2.5% salt (3.44h eq)
+    const POOLISH_ANCHOR_EQ = 16 * temperatureRate(23) * fermentationHydrationFactor(100)
+    const POOLISH_MAIN_ANCHOR_EQ = 24 * temperatureRate(6) * fermentationHydrationFactor(68) * saltFactor(2.5)
+    const poolishEqForYeast = bigaEq // poolish yeast covers its own stage
+    const mainEqForYeast = finalEq || 1
+    const dynamicPoolishYeast = clamp((POOLISH_YEAST_DEFAULT * POOLISH_ANCHOR_EQ) / (poolishEqForYeast || 1), YEAST_MIN_PCT, YEAST_MAX_PCT)
+    const dynamicMainYeast = clamp((POOLISH_MAIN_YEAST_DEFAULT * POOLISH_MAIN_ANCHOR_EQ) / mainEqForYeast, YEAST_MIN_PCT, YEAST_MAX_PCT)
+    bigaYeast = dynamicPoolishYeast
+    let mainYeast = dynamicMainYeast
+    resolved.bigaYeast = bigaYeast
+    resolved.poolishMainYeast = mainYeast
     const p = params.bigaPct / 100
     const yeastFraction = (bigaYeast / 100) * p + (mainYeast / 100) * (1 - p)
     F = target / (1 + params.finalHyd / 100 + salt / 100 + yeastFraction)
@@ -339,25 +347,16 @@ export function computeDough(params) {
     Sf = (F * salt) / 100
     mainYeastPct = mainYeast
     mainYeastG = (Ff * mainYeast) / 100
-    // Poolish is 100% hydration, salt-free pre-ferment
-    bigaEq = fermentationExposure(params.bigaTime, params.bigaTemp, 100, null)
-    bigaMat = maturationExposure(params.bigaTime, params.bigaTemp, 100)
-    roomEq = fermentationExposure(roomTime, roomTemp, params.finalHyd, salt)
-    roomMat = maturationExposure(roomTime, roomTemp, params.finalHyd)
-    coldEq = fermentationExposure(params.finalTime, params.finalTemp, params.finalHyd, salt)
-    coldMat = maturationExposure(params.finalTime, params.finalTemp, params.finalHyd)
-    finalEq = roomEq + coldEq
-    finalMat = roomMat + coldMat
   } else {
     // Biga: hydration matters, salt-free. Final: hydration + salt matter.
+    // Yeast is fully dynamic: biga yeast covers TOTAL fermentation
+    // (biga + final) so final proof temp/time immediately moves grams.
     bigaEq = fermentationExposure(params.bigaTime, params.bigaTemp, bigaHyd, null)
     bigaMat = maturationExposure(params.bigaTime, params.bigaTemp, bigaHyd)
     finalEq = fermentationExposure(params.finalTime, params.finalTemp, params.finalHyd, salt)
     finalMat = maturationExposure(params.finalTime, params.finalTemp, params.finalHyd)
-    suggestion = suggestedFreshYeast(bigaEq)
-    // Yeast is fully dynamic per user request: it recalculates immediately
-    // when time / temp / hydration change. The grams in Recipe are always
-    // derived from the study model, so the display is live.
+    const totalForYeast = bigaEq + finalEq
+    suggestion = suggestedFreshYeast(totalForYeast)
     const effectiveYeast = suggestion ? suggestion.pct : BIGA_YEAST_DEFAULT
     bigaYeast = effectiveYeast
     resolved.bigaYeast = effectiveYeast
@@ -372,8 +371,8 @@ export function computeDough(params) {
     Sf = (F * salt) / 100
   }
 
-  const totalEq = params.prefermentType === 'poolish' ? bigaEq + roomEq + coldEq : bigaEq + finalEq
-  const totalMat = params.prefermentType === 'poolish' ? bigaMat + roomMat + coldMat : bigaMat + finalMat
+  const totalEq = bigaEq + finalEq
+  const totalMat = bigaMat + finalMat
 
   return {
     salt,
@@ -434,8 +433,7 @@ export function computeSchedule(params, bakeDateTimeStr) {
   const bakeTime = new Date(bakeDateTimeStr)
   if (isNaN(bakeTime.getTime())) return null
   if (params.prefermentType === 'poolish') {
-    const roomTime = params.roomTime ?? POOLISH_ROOM_TIME_DEFAULT
-    const finalMixTime = addHours(bakeTime, -(params.finalTime + roomTime))
+    const finalMixTime = addHours(bakeTime, -params.finalTime)
     const poolishMixTime = addHours(finalMixTime, -params.bigaTime)
     return { bakeTime, finalMixTime, poolishMixTime }
   }

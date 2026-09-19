@@ -13,8 +13,6 @@ export const PARAM_KEYS = [
   'finalHyd',
   'finalTemp',
   'finalTime',
-  'roomTime',
-  'roomTemp',
   'useFreshYeast',
   'bigaHydFine',
   'bigaYeastFine',
@@ -31,8 +29,6 @@ const NUMERIC_KEYS = [
   'finalHyd',
   'finalTemp',
   'finalTime',
-  'roomTime',
-  'roomTemp',
 ]
 
 const FINE_KEYS = ['bigaHydFine', 'bigaYeastFine', 'poolishMainYeastFine', 'saltFine']

@@ -186,11 +186,11 @@ describe('recipes', () => {
   })
 
   describe('pizza schema param normalization', () => {
-    it('fills prefermentType to biga and room defaults when absent', () => {
+    it('fills prefermentType to biga when absent (room rest removed)', () => {
       const out = normalizeParams({ balls: 4, ballW: 260 })
       expect(out.prefermentType).toBe('biga')
-      expect(out.roomTime).toBe(1)
-      expect(out.roomTemp).toBe(23)
+      expect(out.roomTime).toBeUndefined()
+      expect(out.roomTemp).toBeUndefined()
     })
 
     it('accepts prefermentType poolish and preserves it', () => {
@@ -212,10 +212,10 @@ describe('recipes', () => {
       expect(normalizeParams({ poolishMainYeastFine: 'lots' }).poolishMainYeastFine).toBe('')
     })
 
-    it('normalizes roomTime and roomTemp as numbers', () => {
+    it('ignores legacy roomTime and roomTemp (feature removed)', () => {
       const out = normalizeParams({ roomTime: '1', roomTemp: '23' })
-      expect(out.roomTime).toBe(1)
-      expect(out.roomTemp).toBe(23)
+      expect(out.roomTime).toBeUndefined()
+      expect(out.roomTemp).toBeUndefined()
     })
   })
 })

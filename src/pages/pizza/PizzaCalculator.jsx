@@ -34,8 +34,9 @@ const FERMENTATION_COLOR = {
 
 export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, setBakeDateTimeStr, loadedRecipe, isDirty, footer }) {
   const [copied, setCopied] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
-  const { balls, ballW, bigaPct, bigaTemp, bigaTime, finalHyd, finalTemp, finalTime, roomTime, roomTemp, prefermentType, useFreshYeast } = params
+  const { balls, ballW, bigaPct, bigaTemp, bigaTime, finalHyd, finalTemp, finalTime, prefermentType, useFreshYeast } = params
 
   const d = computeDough(params)
   const { salt, bigaHyd, bigaYeast, F, Fb, Wb, Yb, Ff, Wf, Sf, bigaEq, finalEq, target } = d
@@ -49,8 +50,6 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
 
   const bigaLevel = fermentationLevel(bigaEq)
   const finalLevel = fermentationLevel(finalEq)
-  const roomLevel = fermentationLevel(d.roomEq)
-  const coldLevel = fermentationLevel(d.coldEq)
   const totalLevel = fermentationLevel(d.totalEq)
   const totalMatLevel = maturationLevel(d.totalMat)
   const { suggestedYeast, suggestedYeastPct, yeastDose } = d
@@ -144,7 +143,16 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
           <NumberInput label="Temperature" value={bigaTemp} onChange={(v) => setParam('bigaTemp', v)} min={4} max={30} step={1} unit="°C" />
           <NumberInput label="Time" value={bigaTime} onChange={(v) => setParam('bigaTime', v)} min={4} max={48} step={1} unit="h" />
           {isPoolish && (
-            <NumberInput label="Poolish yeast" fieldId="num-poolish-yeast-preferment" value={bigaYeast} onChange={(v) => setParam('bigaYeastFine', String(v))} min={0.05} max={5} step={0.05} unit="%" />
+            <div className="bg-sunken rounded-xl p-3 border border-line">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-ink flex items-center gap-1.5">
+                  Poolish yeast <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-[10px] font-semibold px-2 py-0.5">AUTO</span>
+                  <span className="text-[11px] text-green-600 dark:text-green-400 font-normal">↻ live</span>
+                </span>
+                <span className="text-ink font-bold tabular-nums">{round(bigaYeast)}% <span className="text-xs font-normal text-ink-muted">· {round(d.yeastG)}g</span></span>
+              </div>
+              <p className="text-[11px] text-ink-muted mt-1.5">From poolish time × temp — change the poolish dials and the grams update immediately.</p>
+            </div>
           )}
           <div className="bg-sunken rounded-xl p-3 border border-line">
             <div className="flex justify-between items-center mb-1">
@@ -235,34 +243,19 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
             </>
           )}
           {isPoolish && (
-            <>
-              <div className="bg-sunken rounded-xl p-3 border border-line">
-                <div className="mb-3">
-                  <div className="text-sm font-medium text-ink">Room rest</div>
-                  <div className="text-xs text-ink-muted">bulk proof before shaping</div>
-                </div>
-                <NumberInput label="Room rest time" value={roomTime} onChange={(v) => setParam('roomTime', v)} min={0} max={48} step={1} unit="h" />
-                <NumberInput label="Room rest temperature" value={roomTemp} onChange={(v) => setParam('roomTemp', v)} min={0} max={35} step={1} unit="°C" />
-                <div className="flex justify-between items-center mt-3">
-                  <span className="text-sm text-ink-muted">Fermentation equivalent</span>
-                  <span className="text-ink font-bold">{round(d.roomEq)}h @ 25°C</span>
-                </div>
-                <p className={`text-xs font-medium mt-1 ${FERMENTATION_COLOR[roomLevel]}`}>{FERMENTATION_TEXT[roomLevel]}</p>
+            <div className="bg-sunken rounded-xl p-3 border border-line">
+              <div className="mb-3">
+                <div className="text-sm font-medium text-ink">Final proof</div>
+                <div className="text-xs text-ink-muted">in the fridge</div>
               </div>
-              <div className="bg-sunken rounded-xl p-3 border border-line">
-                <div className="mb-3">
-                  <div className="text-sm font-medium text-ink">Cold proof</div>
-                  <div className="text-xs text-ink-muted">final proof in the fridge</div>
-                </div>
-                <NumberInput label="Cold proof time" value={finalTime} onChange={(v) => setParam('finalTime', v)} min={1} max={96} step={1} unit="h" />
-                <NumberInput label="Cold proof temperature" value={finalTemp} onChange={(v) => setParam('finalTemp', v)} min={-4} max={30} step={1} unit="°C" />
-                <div className="flex justify-between items-center mt-3">
-                  <span className="text-sm text-ink-muted">Fermentation equivalent</span>
-                  <span className="text-ink font-bold">{round(d.coldEq)}h @ 25°C</span>
-                </div>
-                <p className={`text-xs font-medium mt-1 ${FERMENTATION_COLOR[coldLevel]}`}>{FERMENTATION_TEXT[coldLevel]}</p>
+              <NumberInput label="Proof time" value={finalTime} onChange={(v) => setParam('finalTime', v)} min={1} max={96} step={1} unit="h" />
+              <NumberInput label="Proof temperature" value={finalTemp} onChange={(v) => setParam('finalTemp', v)} min={-4} max={30} step={1} unit="°C" />
+              <div className="flex justify-between items-center mt-3">
+                <span className="text-sm text-ink-muted">Fermentation equivalent</span>
+                <span className="text-ink font-bold">{round(d.finalEq)}h @ 25°C</span>
               </div>
-            </>
+              <p className={`text-xs font-medium mt-1 ${FERMENTATION_COLOR[finalLevel]}`}>{FERMENTATION_TEXT[finalLevel]}</p>
+            </div>
           )}
 
           <div className="bg-sunken rounded-xl p-3 border border-line">
@@ -271,7 +264,7 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
                 Total maturation
                 <InfoPopover label="Total maturation" align="left">
                   {isPoolish
-                    ? 'Fermentation (CO₂) and maturity (gluten relaxation) are separate per Covino et al. 2023. Poolish + room + cold. Exposure is Σ hours × temperatureRate × hydration × salt. Hydration affects handling ~2.5× more than gas. Over-fermentation is a total-budget problem.'
+                    ? 'Fermentation (CO₂) and maturity (gluten relaxation) are separate per Covino et al. 2023. Poolish + final proof. Exposure is Σ hours × temperatureRate × hydration × salt. Hydration affects handling ~2.5× more than gas. Over-fermentation is a total-budget problem.'
                     : 'Fermentation (gas) and maturity (extensibility) evolve separately. Biga + final. Σ exposure as above; biga dose only balances the biga stage — if total runs long, shorten final time or cool it rather than cutting yeast further. Capped yeast means lengthen/warm instead.'}
                 </InfoPopover>
               </span>
@@ -413,52 +406,73 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
         </button>
       </Card>
 
-      {/* Variables */}
-      <Card>
-        <h2 className="font-semibold text-ink mb-4 flex items-center gap-2">
-          <span className="text-lg">⚙️</span> Variables
-          {isPoolish ? (
-            <InfoPopover label="Poolish yeast">
-              Set on a fresh-yeast basis: poolish yeast as a percentage of the poolish's flour,
-              main yeast as a percentage of the main dough's flour. Poolish keeps these fixed —
-              there is no schedule-driven suggestion — so the dials only move when you change your
-              recipe.
-            </InfoPopover>
-          ) : (
-            <InfoPopover label="Biga yeast">
-              Auto when empty — grams in Recipe follow time/temp/hydration live. Enter a value to lock it manually; clear to return to auto.
-            </InfoPopover>
-          )}
-        </h2>
-        <div className="space-y-4">
-          {isPoolish ? (
-            <NumberInput label="Poolish yeast" value={bigaYeast} onChange={(v) => setParam('bigaYeastFine', String(v))} min={0.05} max={5} step={0.05} unit="%" />
-          ) : (
-            <div className="bg-sunken rounded-xl p-3 border border-line">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-ink flex items-center gap-1.5">
-                  Biga yeast <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-[10px] font-semibold px-2 py-0.5">AUTO</span>
-                  <span className="text-[11px] text-green-600 dark:text-green-400 font-normal">↻ live</span>
-                </span>
-                <span className="text-ink font-bold tabular-nums">{round(bigaYeast)}% <span className="text-xs font-normal text-ink-muted">· {round(d.yeastG)}g {useFreshYeast ? 'fresh' : 'instant'}</span></span>
+      {/* Advanced — Variables hidden by default */}
+      <div className="flex justify-center">
+        <button
+          type="button"
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="text-xs text-ink-muted hover:text-ink flex items-center gap-1.5 py-2 px-3 rounded-lg hover:bg-sunken transition"
+          aria-expanded={showAdvanced}
+        >
+          <span className={`transition-transform text-[10px] ${showAdvanced ? 'rotate-90' : ''}`}>▶</span>
+          Advanced {showAdvanced ? '— hide variables' : '— show variables (salt, yeast lock)'}
+        </button>
+      </div>
+      {showAdvanced && (
+        <Card>
+          <h2 className="font-semibold text-ink mb-4 flex items-center gap-2">
+            <span className="text-lg">⚙️</span> Variables
+            <span className="text-xs font-normal text-ink-muted">advanced</span>
+            {isPoolish ? (
+              <InfoPopover label="Poolish yeast">
+                Set on a fresh-yeast basis: poolish yeast as a percentage of the poolish's flour, main yeast as a percentage of the main dough's flour. Poolish keeps these fixed — there is no schedule-driven suggestion — so the dials only move when you change your recipe.
+              </InfoPopover>
+            ) : (
+              <InfoPopover label="Biga yeast">
+                Auto when empty — grams in Recipe follow time/temp/hydration live. Enter a value to lock it manually; clear to return to auto.
+              </InfoPopover>
+            )}
+          </h2>
+          <div className="space-y-4">
+            {isPoolish ? (
+              <>
+                <div className="bg-sunken rounded-xl p-3 border border-line">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-ink flex items-center gap-1.5">
+                      Poolish yeast <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-[10px] font-semibold px-2 py-0.5">AUTO</span>
+                      <span className="text-[11px] text-green-600 dark:text-green-400 font-normal">↻ live</span>
+                    </span>
+                    <span className="text-ink font-bold tabular-nums">{round(bigaYeast)}% <span className="text-xs font-normal text-ink-muted">· {round(d.yeastG)}g {useFreshYeast ? 'fresh' : 'instant'}</span></span>
+                  </div>
+                  <p className="text-[11px] text-ink-muted mt-1.5">Poolish stage × temp — grams update when you change poolish time/temp.</p>
+                </div>
+                <div className="bg-sunken rounded-xl p-3 border border-line">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-ink flex items-center gap-1.5">
+                      Main yeast <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-[10px] font-semibold px-2 py-0.5">AUTO</span>
+                      <span className="text-[11px] text-green-600 dark:text-green-400 font-normal">↻ live</span>
+                    </span>
+                    <span className="text-ink font-bold tabular-nums">{round(d.mainYeastPct)}% <span className="text-xs font-normal text-ink-muted">· {round(mainYeastG)}g {useFreshYeast ? 'fresh' : 'instant'}</span></span>
+                  </div>
+                  <p className="text-[11px] text-ink-muted mt-1.5">Final proof × temp × hydration × salt — increase cold proof to 25°C and the grams drop immediately.</p>
+                </div>
+              </>
+            ) : (
+              <div className="bg-sunken rounded-xl p-3 border border-line">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-ink flex items-center gap-1.5">
+                    Biga yeast <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-[10px] font-semibold px-2 py-0.5">AUTO</span>
+                    <span className="text-[11px] text-green-600 dark:text-green-400 font-normal">↻ live</span>
+                  </span>
+                  <span className="text-ink font-bold tabular-nums">{round(bigaYeast)}% <span className="text-xs font-normal text-ink-muted">· {round(d.yeastG)}g {useFreshYeast ? 'fresh' : 'instant'}</span></span>
+                </div>
+                <p className="text-[11px] text-ink-muted mt-1.5">Calculated from total (biga + final) time × temp × hydration × salt — change final proof to 25°C and the grams drop immediately. No manual field needed; the Recipe below mirrors this value.</p>
               </div>
-              <p className="text-[11px] text-ink-muted mt-1.5">Calculated from time × temp × hydration × salt — change any dial and the grams update immediately. No manual field needed; the Recipe below mirrors this value.</p>
-            </div>
-          )}
-          {isPoolish && (
-            <NumberInput
-              label="Main yeast"
-              value={params.poolishMainYeastFine !== '' ? parseFloat(params.poolishMainYeastFine) : d.mainYeastPct}
-              onChange={(v) => setParam('poolishMainYeastFine', String(v))}
-              min={0.05}
-              max={5}
-              step={0.05}
-              unit="%"
-            />
-          )}
-          <NumberInput label="Salt" value={salt} onChange={(v) => setParam('saltFine', String(v))} min={0.5} max={5} step={0.1} unit="%" />
-        </div>
-      </Card>
+            )}
+            <NumberInput label="Salt" value={salt} onChange={(v) => setParam('saltFine', String(v))} min={0.5} max={5} step={0.1} unit="%" />
+          </div>
+        </Card>
+      )}
 
       {/* Schedule */}
       <Card>
@@ -504,14 +518,7 @@ export default function PizzaCalculator({ params, setParam, bakeDateTimeStr, set
                 <div className="text-xs text-ink-muted font-mono mt-0.5">
                   add {round(Ff)}g flour · {round(Wf)}g water · {round(Sf)}g salt{isPoolish ? ` · ${round(mainYeastG)}g ${useFreshYeast ? 'fresh yeast' : 'instant yeast'}` : ''} — ball up within 1–2 h
                 </div>
-                {isPoolish ? (
-                  <>
-                    <div className="text-xs text-ink-muted font-mono">room rest {roomTime}h at {roomTemp}°C</div>
-                    <div className="text-xs text-ink-muted font-mono">cold proof {finalTime}h at {finalTemp}°C</div>
-                  </>
-                ) : (
-                  <div className="text-xs text-ink-muted font-mono">{finalTime}h at {finalTemp}°C</div>
-                )}
+                <div className="text-xs text-ink-muted font-mono">{finalTime}h at {finalTemp}°C</div>
               </div>
             </div>
             <div className="grid grid-cols-[88px_1fr] gap-3 items-start py-2.5">

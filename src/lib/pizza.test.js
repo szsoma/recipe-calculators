@@ -28,8 +28,6 @@ const POOLISH_PARAMS = {
   finalHyd: 68,
   finalTemp: 6,
   finalTime: 24,
-  roomTemp: 23,
-  roomTime: 1,
   saltFine: '2.5',
   bigaYeastFine: '0.1',
   bigaHydFine: '',
@@ -73,24 +71,24 @@ describe('resolveParams', () => {
 })
 
 describe('computeDough', () => {
-  it('matches the known default batch (auto yeast: longer time/hydration now auto-adjusts grams)', () => {
-    // DEFAULT has bigaYeastFine='' → auto yeast 1.5% for 12h@18°C 42% hyd (6.77h eq)
+  it('matches the known default batch (auto yeast now covers biga+final total)', () => {
+    // DEFAULT biga 12h@18°C 42% (6.77h) + final 10h@20°C 65% (8.16h) =14.93h total → 0.68% fresh
     const d = computeDough(DEFAULT_PIZZA_PARAMS)
     expect(round(d.target)).toBe(1060.8)
-    expect(round(d.F)).toBe(630.9)
-    expect(round(d.Fb)).toBe(189.3)
-    expect(round(d.Wb)).toBe(79.5)
-    expect(round(d.Yb)).toBe(2.8)
-    expect(round(d.Ff)).toBe(441.6)
-    expect(round(d.Wf)).toBe(330.6)
-    expect(round(d.Sf)).toBe(17)
+    expect(round(d.F)).toBe(631.8)
+    expect(round(d.Fb)).toBe(189.5)
+    expect(round(d.Wb)).toBe(79.6)
+    expect(round(d.Yb)).toBe(1.3)
+    expect(round(d.Ff)).toBe(442.3)
+    expect(round(d.Wf)).toBe(331.1)
+    expect(round(d.Sf)).toBe(17.1)
   })
 
   it('ignores a stored manual bigaYeastFine — yeast is now always auto (live)', () => {
     const d = computeDough({ ...DEFAULT_PIZZA_PARAMS, bigaYeastFine: '1' })
-    // Even with bigaYeastFine='1', biga yeast is auto 1.5% for 12h@18°C 42% hyd
-    expect(round(d.F)).toBe(630.9)
-    expect(round(d.Yb)).toBe(2.8)
+    // Even with bigaYeastFine='1', biga yeast is auto 0.68% for total 14.93h
+    expect(round(d.F)).toBe(631.8)
+    expect(round(d.Yb)).toBe(1.3)
   })
 
   it('sums the components back to the target dough weight', () => {
@@ -113,7 +111,7 @@ describe('computeDough', () => {
   it('divides the displayed yeast by three for instant yeast', () => {
     const params = { ...DEFAULT_PIZZA_PARAMS, useFreshYeast: false }
     const d = computeDough(params)
-    // auto yeast for default is 1.5% fresh → 0.5% instant
+    // auto yeast for default is 0.68% fresh → 0.227% instant
     expect(d.yeastPct).toBeCloseTo(d.bigaYeast / 3, 10)
     expect(d.yeastG).toBeCloseTo(d.Yb / 3, 10)
   })
@@ -233,7 +231,7 @@ describe('computeSchedule', () => {
 describe('buildRecipeText', () => {
   it('includes the totals and omits the schedule when there is no bake time', () => {
     const text = buildRecipeText(DEFAULT_PIZZA_PARAMS)
-    expect(text).toContain('Flour total: 630.9g')
+    expect(text).toContain('Flour total: 631.8g')
     expect(text).toContain('4 balls')
     expect(text).not.toContain('Schedule')
   })
@@ -246,7 +244,7 @@ describe('buildRecipeText', () => {
 
   it('uses the displayed instant yeast amount', () => {
     const text = buildRecipeText({ ...DEFAULT_PIZZA_PARAMS, useFreshYeast: false })
-    expect(text).toContain('Yeast (Instant): 0.9g')
+    expect(text).toContain('Yeast (Instant): 0.4g')
   })
 })
 
@@ -263,8 +261,6 @@ describe('prefermentDefaults', () => {
       finalHyd: 68,
       finalTemp: 6,
       finalTime: 24,
-      roomTemp: 23,
-      roomTime: 1,
       poolishMainYeastFine: '0.5',
       saltFine: '2.5',
       useFreshYeast: true,
@@ -283,8 +279,6 @@ describe('prefermentDefaults', () => {
       finalHyd: 65,
       finalTemp: 20,
       finalTime: 10,
-      roomTemp: 23,
-      roomTime: 1,
       poolishMainYeastFine: '0.5',
       saltFine: '',
       useFreshYeast: true,
@@ -323,10 +317,8 @@ describe('computeDough poolish', () => {
     expect(round(d.mainYeastG)).toBe(1.9)
     expect(round(d.total)).toBe(1101.6)
     expect(round(d.bigaEq)).toBe(19.4)
-    expect(round(d.roomEq)).toBe(1)
-    expect(round(d.coldEq)).toBe(3.4)
-    expect(round(d.finalEq)).toBe(4.4)
-    expect(round(d.totalEq)).toBe(23.8)
+    expect(round(d.finalEq)).toBe(3.4)
+    expect(round(d.totalEq)).toBe(22.9)
   })
 
   it('sums the components back to the target dough weight', () => {
@@ -382,12 +374,12 @@ describe('computeDough poolish', () => {
 })
 
 describe('computeSchedule poolish', () => {
-  it('adds the room rest to the final mix offset and walks the poolish back by biga time', () => {
+  it('walks the poolish back by biga time and final proof', () => {
     const s = computeSchedule(POOLISH_PARAMS, '2026-09-14T18:00')
     const hours = (a, b) => (b.getTime() - a.getTime()) / 3600000
-    expect(hours(s.finalMixTime, s.bakeTime)).toBe(25)
+    expect(hours(s.finalMixTime, s.bakeTime)).toBe(24)
     expect(hours(s.poolishMixTime, s.finalMixTime)).toBe(16)
-    expect(hours(s.poolishMixTime, s.bakeTime)).toBe(41)
+    expect(hours(s.poolishMixTime, s.bakeTime)).toBe(40)
   })
 })
 
